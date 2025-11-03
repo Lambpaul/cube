@@ -1,8 +1,9 @@
 // Global variables
 let socket = null;
 let cubeRenderer = null;
-let currentCubeId = null;
-let hasNamed = false;
+let currentCubeName = null;
+let localClicks = 0;
+let isInDatabase = false;
 
 // UI Elements
 const welcomeText = document.getElementById('welcome-text');
@@ -46,8 +47,8 @@ function init() {
         welcomeText.classList.add('fade-out');
     }, 10000);
 
-    // Auto-create a cube on page load
-    createCube();
+    // Start with a local cube (not in database yet)
+    startLocalCube();
 
     // Event listeners
     setupEventListeners();
@@ -65,13 +66,30 @@ function initSocket() {
         updateCubeState(cube);
     });
 
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
+    socket.on('cubeCreated', (cube) => {
+        console.log('Cube created in database:', cube._id);
+        isInDatabase = true;
+        currentCubeName = cube._id;
+        updateUIWithCubeName(cube._id);
     });
 
     socket.on('error', (error) => {
         console.error('Socket error:', error);
+        alert(error.message || 'An error occurred');
     });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+    });
+}
+
+// Start a local cube (not in database)
+function startLocalCube() {
+    localClicks = 0;
+    isInDatabase = false;
+    currentCubeName = null;
+    cubeNameDisplay.classList.add('hidden');
+    currentCubeSection.classList.add('hidden');
 }
 
 // Setup event listeners
@@ -93,17 +111,17 @@ function setupEventListeners() {
         }
     });
 
-    // Create cube button
+    // Create new cube button (resets to local cube)
     createCubeBtn.addEventListener('click', () => {
-        createCube();
+        startLocalCube();
         settingsModal.classList.add('hidden');
     });
 
     // Join cube button
     joinCubeBtn.addEventListener('click', () => {
-        const cubeId = cubeIdInput.value.trim();
-        if (cubeId) {
-            joinCubeById(cubeId);
+        const cubeName = cubeIdInput.value.trim();
+        if (cubeName) {
+            joinCubeByName(cubeName);
             settingsModal.classList.add('hidden');
         }
     });
@@ -115,26 +133,27 @@ function setupEventListeners() {
         }
     });
 
-    // Copy cube ID
+    // Copy cube name
     copyIdBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(currentCubeId)
-            .then(() => {
-                copyIdBtn.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyIdBtn.textContent = 'Copy ID';
-                }, 2000);
-            })
-            .catch(err => {
-                console.error('Failed to copy:', err);
-            });
+        if (currentCubeName) {
+            navigator.clipboard.writeText(currentCubeName)
+                .then(() => {
+                    copyIdBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyIdBtn.textContent = 'Copy Name';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+        }
     });
 
     // Confirm name button
     confirmNameBtn.addEventListener('click', () => {
         const name = cubeNameInput.value.trim();
         if (name) {
-            updateCubeName(name);
-            nameModal.classList.add('hidden');
+            createNamedCube(name);
             cubeNameInput.value = '';
         }
     });
@@ -152,83 +171,78 @@ function setupEventListeners() {
     });
 }
 
-// Create a new cube
-function createCube() {
-    fetch('/api/cube', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        joinCubeById(data._id);
-    })
-    .catch(error => {
-        console.error('Error creating cube:', error);
-    });
+// Join a cube by name
+function joinCubeByName(cubeName) {
+    socket.emit('joinCube', { cubeName });
+    currentCubeName = cubeName;
+    isInDatabase = true;
+    localClicks = 0;
+    updateUIWithCubeName(cubeName);
 }
 
-// Join a cube by ID
-function joinCubeById(cubeId) {
-    currentCubeId = cubeId;
-    hasNamed = false;
-    socket.emit('joinCube', { cubeId });
-
-    // Update UI
-    currentCubeIdSpan.textContent = cubeId;
+// Update UI with cube name
+function updateUIWithCubeName(name) {
+    currentCubeIdSpan.textContent = name;
     currentCubeSection.classList.remove('hidden');
-    cubeNameDisplay.classList.add('hidden');
-    cubeNameDisplay.textContent = '';
+    cubeNameDisplay.textContent = name;
+    cubeNameDisplay.classList.remove('hidden');
 }
 
 // Click the cube
 function clickCube() {
-    if (currentCubeId) {
-        socket.emit('clickCube', { cubeId: currentCubeId });
+    if (isInDatabase && currentCubeName) {
+        // Cube is in database, send click to server
+        socket.emit('clickCube', { cubeName: currentCubeName });
+    } else {
+        // Local cube, increment locally
+        localClicks++;
+        console.log(`Local clicks: ${localClicks}`);
+
+        // Check if we reached 100 clicks
+        if (localClicks >= 100) {
+            // Show name modal
+            nameModal.classList.remove('hidden');
+        }
     }
 }
 
-// Update cube state
+// Create a named cube in the database
+function createNamedCube(name) {
+    if (localClicks >= 100) {
+        socket.emit('createNamedCube', { name, clicks: localClicks });
+        nameModal.classList.add('hidden');
+    }
+}
+
+// Update cube state (from server)
 function updateCubeState(cube) {
     if (!cube) return;
 
-    // Check if name feature is unlocked and user hasn't named it yet
-    if (cube.unlocked.includes('name') && !hasNamed && cube.name === '???') {
-        // Show name modal
-        nameModal.classList.remove('hidden');
-        hasNamed = true;
-    }
+    console.log('Cube state updated:', cube);
 
     // Update cube name display
-    if (cube.name && cube.name !== '???') {
-        cubeNameDisplay.textContent = cube.name;
+    if (cube._id) {
+        cubeNameDisplay.textContent = cube._id;
         cubeNameDisplay.classList.remove('hidden');
+        currentCubeName = cube._id;
     }
 
     // Update cube renderer based on unlocked features
     if (cubeRenderer) {
         // Check if fill should be enabled
-        if (cube.unlocked.includes('fill')) {
+        if (cube.unlocked && cube.unlocked.includes('fill')) {
             cubeRenderer.enableFill();
         }
 
         // Check if 3D should be enabled
-        if (cube.unlocked.includes('3d') && !cubeRenderer.is3D) {
+        if (cube.unlocked && cube.unlocked.includes('3d') && !cubeRenderer.is3D) {
             cubeRenderer.enable3D();
         }
 
         // Update color if color feature is unlocked
-        if (cube.unlocked.includes('color') && cube.color) {
+        if (cube.unlocked && cube.unlocked.includes('color') && cube.color) {
             cubeRenderer.updateColor(cube.color);
         }
-    }
-}
-
-// Update cube name
-function updateCubeName(name) {
-    if (currentCubeId && name) {
-        socket.emit('updateCubeName', { cubeId: currentCubeId, name: name });
     }
 }
 

@@ -29,15 +29,15 @@ mongoose.connect(`mongodb://${DB_HOST}:${DB_PORT}/${DB_NAME}`, {
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// Cube Model
+// Cube Model - Using name as _id (unique identifier)
 const cubeSchema = new mongoose.Schema({
-    name: {
+    _id: {
         type: String,
-        default: '???'
+        required: true
     },
     clicks: {
         type: Number,
-        default: 0
+        default: 100
     },
     color: {
         type: String,
@@ -45,7 +45,7 @@ const cubeSchema = new mongoose.Schema({
     },
     unlocked: {
         type: [String],
-        default: []
+        default: ['name']
     },
     createdAt: {
         type: Date,
@@ -84,18 +84,33 @@ function checkUnlocks(cube) {
 
 // REST API Routes
 
-// Create a new cube
+// Create a new cube with a name (called when user names the cube at 100 clicks)
 app.post('/api/cube', async (req, res) => {
     try {
+        const { name, clicks } = req.body;
+
+        if (!name || name.trim().length === 0) {
+            return res.status(400).json({ error: 'Cube name is required' });
+        }
+
+        const cubeName = name.trim();
+
+        // Check if cube with this name already exists
+        const existingCube = await Cube.findById(cubeName);
+        if (existingCube) {
+            return res.status(409).json({ error: 'A cube with this name already exists' });
+        }
+
+        // Create cube with name as _id
         const cube = new Cube({
-            name: '???',
-            clicks: 0,
+            _id: cubeName,
+            clicks: clicks || 100,
             color: '#000000',
-            unlocked: []
+            unlocked: ['name']
         });
 
         await cube.save();
-        console.log(`New cube created: ${cube._id}`);
+        console.log(`New cube created: ${cubeName}`);
         res.json(cube);
     } catch (error) {
         console.error('Error creating cube:', error);
@@ -103,10 +118,10 @@ app.post('/api/cube', async (req, res) => {
     }
 });
 
-// Get a cube by ID
-app.get('/api/cube/:id', async (req, res) => {
+// Get a cube by name
+app.get('/api/cube/:name', async (req, res) => {
     try {
-        const cube = await Cube.findById(req.params.id);
+        const cube = await Cube.findById(req.params.name);
 
         if (!cube) {
             return res.status(404).json({ error: 'Cube not found' });
@@ -137,26 +152,26 @@ app.get('/api/cubes', async (req, res) => {
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Join a cube room
-    socket.on('joinCube', async ({ cubeId }) => {
+    // Join a cube room by name
+    socket.on('joinCube', async ({ cubeName }) => {
         try {
-            const cube = await Cube.findById(cubeId);
+            const cube = await Cube.findById(cubeName);
 
             if (!cube) {
                 socket.emit('error', { message: 'Cube not found' });
                 return;
             }
 
-            socket.join(cubeId);
-            console.log(`User ${socket.id} joined cube ${cubeId}`);
+            socket.join(cubeName);
+            console.log(`User ${socket.id} joined cube ${cubeName}`);
 
             // Send current cube state
             socket.emit('cubeState', cube);
 
             // Notify others in the room
-            socket.to(cubeId).emit('userJoined', {
+            socket.to(cubeName).emit('userJoined', {
                 socketId: socket.id,
-                cubeId: cubeId
+                cubeName: cubeName
             });
         } catch (error) {
             console.error('Error joining cube:', error);
@@ -164,10 +179,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Click the cube
-    socket.on('clickCube', async ({ cubeId }) => {
+    // Click the cube (for cubes that already exist in DB)
+    socket.on('clickCube', async ({ cubeName }) => {
         try {
-            const cube = await Cube.findById(cubeId);
+            const cube = await Cube.findById(cubeName);
 
             if (!cube) {
                 socket.emit('error', { message: 'Cube not found' });
@@ -183,49 +198,60 @@ io.on('connection', (socket) => {
             await cube.save();
 
             // Broadcast updated state to all users in the room
-            io.to(cubeId).emit('cubeState', cube);
+            io.to(cubeName).emit('cubeState', cube);
 
-            console.log(`Cube ${cubeId} clicked. Total clicks: ${cube.clicks}`);
+            console.log(`Cube ${cubeName} clicked. Total clicks: ${cube.clicks}`);
         } catch (error) {
             console.error('Error clicking cube:', error);
             socket.emit('error', { message: 'Failed to process click' });
         }
     });
 
-    // Update cube name
-    socket.on('updateCubeName', async ({ cubeId, name }) => {
+    // Create cube with name (when user reaches 100 clicks and names it)
+    socket.on('createNamedCube', async ({ name, clicks }) => {
         try {
-            const cube = await Cube.findById(cubeId);
-
-            if (!cube) {
-                socket.emit('error', { message: 'Cube not found' });
+            if (!name || name.trim().length === 0) {
+                socket.emit('error', { message: 'Cube name is required' });
                 return;
             }
 
-            // Check if name feature is unlocked
-            if (!cube.unlocked.includes('name')) {
-                socket.emit('error', { message: 'Name feature not unlocked yet' });
+            const cubeName = name.trim();
+
+            // Check if cube already exists
+            const existingCube = await Cube.findById(cubeName);
+            if (existingCube) {
+                socket.emit('error', { message: 'A cube with this name already exists' });
                 return;
             }
 
-            cube.name = name;
-            cube.lastInteraction = new Date();
+            // Create new cube
+            const cube = new Cube({
+                _id: cubeName,
+                clicks: clicks || 100,
+                color: '#000000',
+                unlocked: ['name']
+            });
+
             await cube.save();
 
-            // Broadcast updated state to all users in the room
-            io.to(cubeId).emit('cubeState', cube);
+            // Join the cube room
+            socket.join(cubeName);
 
-            console.log(`Cube ${cubeId} renamed to: ${name}`);
+            // Send cube state
+            socket.emit('cubeCreated', cube);
+            socket.emit('cubeState', cube);
+
+            console.log(`Cube created and named: ${cubeName}`);
         } catch (error) {
-            console.error('Error updating cube name:', error);
-            socket.emit('error', { message: 'Failed to update name' });
+            console.error('Error creating named cube:', error);
+            socket.emit('error', { message: 'Failed to create cube' });
         }
     });
 
     // Update cube color
-    socket.on('updateCubeColor', async ({ cubeId, color }) => {
+    socket.on('updateCubeColor', async ({ cubeName, color }) => {
         try {
-            const cube = await Cube.findById(cubeId);
+            const cube = await Cube.findById(cubeName);
 
             if (!cube) {
                 socket.emit('error', { message: 'Cube not found' });
@@ -243,9 +269,9 @@ io.on('connection', (socket) => {
             await cube.save();
 
             // Broadcast updated state to all users in the room
-            io.to(cubeId).emit('cubeState', cube);
+            io.to(cubeName).emit('cubeState', cube);
 
-            console.log(`Cube ${cubeId} color changed to: ${color}`);
+            console.log(`Cube ${cubeName} color changed to: ${color}`);
         } catch (error) {
             console.error('Error updating cube color:', error);
             socket.emit('error', { message: 'Failed to update color' });
