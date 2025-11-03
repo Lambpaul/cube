@@ -1,62 +1,52 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cube Evolution</title>
+    <title>The Cube</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <header>
-            <h1>Cube Evolution</h1>
-            <p id="subtitle">Worship the cube and watch it evolve</p>
-        </header>
+    <!-- Welcome text that fades out after 10s -->
+    <div id="welcome-text">Welcome to the Cube</div>
 
-        <div id="start-screen" class="screen">
-            <h2>Choose your path</h2>
-            <button id="create-cube-btn" class="main-btn">Create New Cube</button>
-            <div class="separator">or</div>
-            <div class="join-section">
+    <!-- Cube name in top left (hidden initially) -->
+    <div id="cube-name-display" class="hidden"></div>
+
+    <!-- Settings button in top right -->
+    <button id="settings-btn" title="Settings">⚙</button>
+
+    <!-- Main cube container -->
+    <div id="cube-container"></div>
+
+    <!-- Settings modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" id="close-settings">×</button>
+            <h2>Settings</h2>
+            <div class="modal-section">
+                <label for="cube-id-input">Join a Cube</label>
                 <input type="text" id="cube-id-input" placeholder="Enter Cube ID">
-                <button id="join-cube-btn" class="main-btn">Join Existing Cube</button>
+                <button id="join-cube-btn">Join</button>
+            </div>
+            <div class="modal-section">
+                <button id="create-cube-btn">Create New Cube</button>
+            </div>
+            <div class="modal-section" id="current-cube-section" class="hidden">
+                <p><strong>Current Cube ID:</strong></p>
+                <p id="current-cube-id"></p>
+                <button id="copy-id-btn">Copy ID</button>
             </div>
         </div>
+    </div>
 
-        <div id="game-screen" class="screen hidden">
-            <div class="game-info">
-                <div class="info-item">
-                    <span class="label">Cube ID:</span>
-                    <span id="current-cube-id" class="value"></span>
-                    <button id="copy-id-btn" class="small-btn">Copy</button>
-                </div>
-                <div class="info-item">
-                    <span class="label">Name:</span>
-                    <span id="cube-name" class="value">???</span>
-                    <button id="edit-name-btn" class="small-btn hidden">Edit</button>
-                </div>
-                <div class="info-item">
-                    <span class="label">Clicks:</span>
-                    <span id="cube-clicks" class="value">0</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Color:</span>
-                    <input type="color" id="color-picker" class="hidden" value="#000000">
-                </div>
-            </div>
-
-            <div id="cube-container"></div>
-
-            <div class="controls">
-                <button id="click-cube-btn" class="main-btn">Worship the Cube</button>
-            </div>
-
-            <div id="notifications" class="notifications"></div>
-
-            <div class="unlocked-features">
-                <h3>Unlocked Features:</h3>
-                <ul id="features-list"></ul>
-            </div>
+    <!-- Name cube modal -->
+    <div id="name-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>The Cube Awakens</h2>
+            <p>Your devotion has earned you the right to name this Cube.</p>
+            <input type="text" id="cube-name-input" placeholder="Enter a name" maxlength="30">
+            <button id="confirm-name-btn">Confirm</button>
         </div>
     </div>
 

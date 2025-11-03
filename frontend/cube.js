@@ -5,6 +5,7 @@ class CubeRenderer {
         this.camera = null;
         this.renderer = null;
         this.cube = null;
+        this.edges = null;
         this.is3D = false;
         this.animationId = null;
 
@@ -12,9 +13,9 @@ class CubeRenderer {
     }
 
     init() {
-        // Scene
+        // Scene with white background
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x1a1a2e);
+        this.scene.background = new THREE.Color(0xffffff);
 
         // Camera
         this.camera = new THREE.PerspectiveCamera(
@@ -30,14 +31,14 @@ class CubeRenderer {
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.container.appendChild(this.renderer.domElement);
 
-        // Initial 2D cube (flat square)
-        this.createCube('#000000', false, 1.0);
+        // Initial 2D square (outline only)
+        this.createCube('#000000', false);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lighting (for 3D mode)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambientLight);
 
-        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        const pointLight = new THREE.PointLight(0xffffff, 0.5);
         pointLight.position.set(5, 5, 5);
         this.scene.add(pointLight);
 
@@ -48,30 +49,44 @@ class CubeRenderer {
         this.animate();
     }
 
-    createCube(color, is3D = false, opacity = 1.0) {
-        // Remove existing cube
+    createCube(color, is3D = false) {
+        // Remove existing cube and edges
         if (this.cube) {
             this.scene.remove(this.cube);
             this.cube.geometry.dispose();
             this.cube.material.dispose();
         }
+        if (this.edges) {
+            this.scene.remove(this.edges);
+            this.edges.geometry.dispose();
+            this.edges.material.dispose();
+        }
 
         this.is3D = is3D;
 
-        // Geometry
-        const geometry = new THREE.BoxGeometry(2, 2, is3D ? 2 : 0.1);
+        // Geometry - flat for 2D, full cube for 3D
+        const geometry = new THREE.BoxGeometry(2, 2, is3D ? 2 : 0.01);
 
-        // Material
-        const material = new THREE.MeshPhongMaterial({
+        // For 2D: invisible fill, only edges visible
+        // For 3D: visible fill with edges
+        const material = new THREE.MeshBasicMaterial({
             color: color,
-            transparent: opacity < 1.0,
-            opacity: opacity,
-            shininess: 100
+            transparent: true,
+            opacity: 0,
+            side: THREE.DoubleSide
         });
 
-        // Mesh
         this.cube = new THREE.Mesh(geometry, material);
         this.scene.add(this.cube);
+
+        // Create edges (the black outline)
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: 0x000000,
+            linewidth: 2
+        });
+        this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        this.scene.add(this.edges);
     }
 
     updateColor(color) {
@@ -80,28 +95,34 @@ class CubeRenderer {
         }
     }
 
-    updateOpacity(opacity) {
+    enableFill() {
+        // Make the cube visible (filled)
         if (this.cube) {
-            this.cube.material.opacity = opacity;
-            this.cube.material.transparent = opacity < 1.0;
+            this.cube.material.opacity = 1.0;
         }
     }
 
-    enableFill() {
-        this.updateOpacity(1.0);
-    }
-
     enable3D() {
-        this.createCube(this.cube.material.color.getStyle(), true, this.cube.material.opacity);
+        // Recreate as 3D cube
+        const currentColor = this.cube ? this.cube.material.color.getStyle() : '#000000';
+        const currentOpacity = this.cube ? this.cube.material.opacity : 0;
+        this.createCube(currentColor, true);
+        if (currentOpacity > 0) {
+            this.cube.material.opacity = currentOpacity;
+        }
     }
 
     animate() {
         this.animationId = requestAnimationFrame(() => this.animate());
 
-        // Rotate cube
-        if (this.cube) {
+        // Rotate only in 3D mode
+        if (this.cube && this.is3D) {
             this.cube.rotation.x += 0.005;
             this.cube.rotation.y += 0.01;
+            if (this.edges) {
+                this.edges.rotation.x += 0.005;
+                this.edges.rotation.y += 0.01;
+            }
         }
 
         this.renderer.render(this.scene, this.camera);
