@@ -11,7 +11,9 @@ let selectedFace = 'top';
 
 // UI Elements
 const welcomeText = document.getElementById('welcome-text');
+const topLeftPanel = document.getElementById('top-left-panel');
 const cubeNameDisplay = document.getElementById('cube-name-display');
+const uiToggleBtn = document.getElementById('ui-toggle-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const cubeContainer = document.getElementById('cube-container');
 const uiPanel = document.getElementById('ui-panel');
@@ -128,9 +130,8 @@ function startLocalCube() {
     isInDatabase = false;
     currentCubeName = null;
     currentCubeData = null;
-    cubeNameDisplay.classList.add('hidden');
+    topLeftPanel.classList.add('hidden');
     currentCubeSection.classList.add('hidden');
-    uiPanel.classList.add('hidden');
 
     // Reset renderer
     if (cubeRenderer) {
@@ -143,6 +144,12 @@ function setupEventListeners() {
     // Settings button
     settingsBtn.addEventListener('click', () => {
         settingsModal.classList.remove('hidden');
+    });
+
+    // UI Toggle button
+    uiToggleBtn.addEventListener('click', () => {
+        uiPanel.classList.toggle('collapsed');
+        uiToggleBtn.classList.toggle('collapsed');
     });
 
     // Close settings
@@ -297,7 +304,7 @@ function updateUIWithCubeName(name) {
     currentCubeIdSpan.textContent = name;
     currentCubeSection.classList.remove('hidden');
     cubeNameDisplay.textContent = name;
-    cubeNameDisplay.classList.remove('hidden');
+    topLeftPanel.classList.remove('hidden');
 }
 
 // Click the cube
@@ -335,7 +342,7 @@ function updateCubeState(cube) {
     // Update cube name display
     if (cube._id) {
         cubeNameDisplay.textContent = cube._id;
-        cubeNameDisplay.classList.remove('hidden');
+        topLeftPanel.classList.remove('hidden');
         currentCubeName = cube._id;
     }
 
@@ -406,11 +413,13 @@ function updateDynamicUI(cube) {
         mode3DPanel.classList.add('hidden');
     }
 
-    // Show/hide UI panel
+    // Show/hide UI panel and toggle button
     if (hasAnyUI) {
         uiPanel.classList.remove('hidden');
+        uiToggleBtn.classList.remove('hidden');
     } else {
         uiPanel.classList.add('hidden');
+        uiToggleBtn.classList.add('hidden');
     }
 }
 

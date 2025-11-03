@@ -149,7 +149,18 @@ function checkUnlocks(cube) {
     // Check high resolution unlock (2000 clicks)
     if (cube.clicks >= MILESTONES.HIGH_RES && !cube.unlocked.includes('high_res')) {
         cube.unlocked.push('high_res');
-        cube.gridResolution = 64;
+
+        // Scale existing pixels from 16x16 to 64x64 to maintain relative position
+        const oldResolution = cube.gridResolution;
+        const newResolution = 64;
+        const scaleFactor = newResolution / oldResolution;
+
+        cube.paintedPixels.forEach(pixel => {
+            pixel.x = Math.floor(pixel.x * scaleFactor);
+            pixel.y = Math.floor(pixel.y * scaleFactor);
+        });
+
+        cube.gridResolution = newResolution;
     }
 
     // Check 3D mode unlock (10000 clicks)

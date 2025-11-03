@@ -10,17 +10,13 @@
     <!-- Welcome text that fades out after 10s -->
     <div id="welcome-text">Welcome to the Cube</div>
 
-    <!-- Cube name in top left (hidden initially) -->
-    <div id="cube-name-display" class="hidden"></div>
+    <!-- Cube name and UI controls in top left -->
+    <div id="top-left-panel" class="hidden">
+        <div id="cube-name-display"></div>
+        <button id="ui-toggle-btn" class="hidden" title="Toggle UI">▼</button>
 
-    <!-- Settings button in top right -->
-    <button id="settings-btn" title="Settings">⚙</button>
-
-    <!-- Main cube container -->
-    <div id="cube-container"></div>
-
-    <!-- Dynamic UI Panel (appears based on cube progress) -->
-    <div id="ui-panel" class="hidden">
+        <!-- Dynamic UI Panel (appears based on cube progress) -->
+        <div id="ui-panel" class="hidden">
 
         <!-- Primary Colors Selector (unlocked at 200 clicks) -->
         <div id="primary-colors-panel" class="ui-section hidden">
@@ -91,7 +87,14 @@
             </div>
         </div>
 
+        </div>
     </div>
+
+    <!-- Settings button in top right -->
+    <button id="settings-btn" title="Settings">⚙</button>
+
+    <!-- Main cube container -->
+    <div id="cube-container"></div>
 
     <!-- Settings modal -->
     <div id="settings-modal" class="modal hidden">
