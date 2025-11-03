@@ -24,6 +24,7 @@ docker compose up -d
 
 3. Accédez à l'application:
    - Ouvrez votre navigateur à l'adresse: `http://localhost`
+   - Backend API (direct): `http://localhost:3010`
 
 ## Arrêter l'application
 

@@ -29,7 +29,7 @@ const FEATURES = {
 
 // Initialize Socket.io connection
 function initSocket() {
-    socket = io('http://localhost:3000');
+    socket = io();
 
     socket.on('connect', () => {
         console.log('Connected to server');
@@ -51,7 +51,7 @@ function initSocket() {
 
 // Create a new cube
 function createCube() {
-    fetch('http://localhost:3000/api/cube', {
+    fetch('/api/cube', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
