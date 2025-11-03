@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - cube-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=27017
+      - PORT=3000
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - cube-network
+
+  db:
+    image: mongo:6
+    volumes:
+      - ./db_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    networks:
+      - cube-network
+
+networks:
+  cube-network:
+    driver: bridge

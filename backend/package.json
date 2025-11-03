@@ -1,0 +1,26 @@
+{
+  "name": "cube-evolution-backend",
+  "version": "1.0.0",
+  "description": "Backend for Cube Evolution game",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "game",
+    "cube",
+    "websocket"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.6.3",
+    "socket.io": "^4.5.4",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Evolution</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Cube Evolution</h1>
+            <p id="subtitle">Worship the cube and watch it evolve</p>
+        </header>
+
+        <div id="start-screen" class="screen">
+            <h2>Choose your path</h2>
+            <button id="create-cube-btn" class="main-btn">Create New Cube</button>
+            <div class="separator">or</div>
+            <div class="join-section">
+                <input type="text" id="cube-id-input" placeholder="Enter Cube ID">
+                <button id="join-cube-btn" class="main-btn">Join Existing Cube</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <div class="game-info">
+                <div class="info-item">
+                    <span class="label">Cube ID:</span>
+                    <span id="current-cube-id" class="value"></span>
+                    <button id="copy-id-btn" class="small-btn">Copy</button>
+                </div>
+                <div class="info-item">
+                    <span class="label">Name:</span>
+                    <span id="cube-name" class="value">???</span>
+                    <button id="edit-name-btn" class="small-btn hidden">Edit</button>
+                </div>
+                <div class="info-item">
+                    <span class="label">Clicks:</span>
+                    <span id="cube-clicks" class="value">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Color:</span>
+                    <input type="color" id="color-picker" class="hidden" value="#000000">
+                </div>
+            </div>
+
+            <div id="cube-container"></div>
+
+            <div class="controls">
+                <button id="click-cube-btn" class="main-btn">Worship the Cube</button>
+            </div>
+
+            <div id="notifications" class="notifications"></div>
+
+            <div class="unlocked-features">
+                <h3>Unlocked Features:</h3>
+                <ul id="features-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="cube.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
