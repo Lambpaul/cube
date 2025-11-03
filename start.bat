@@ -25,7 +25,7 @@ if %errorlevel% equ 0 (
     echo Cube Evolution est maintenant en ligne!
     echo ====================================
     echo.
-    echo Acces local: http://localhost
+    echo Acces local: http://localhost:7080
     echo.
     echo Pour voir les logs: docker compose logs -f
     echo Pour arreter: docker compose down

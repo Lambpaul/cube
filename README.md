@@ -23,7 +23,7 @@ docker compose up -d
 ```
 
 3. Accédez à l'application:
-   - Ouvrez votre navigateur à l'adresse: `http://localhost`
+   - Ouvrez votre navigateur à l'adresse: `http://localhost:7080`
    - Backend API (direct): `http://localhost:3010`
 
 ## Arrêter l'application
@@ -66,7 +66,7 @@ Cube/
 Pour exposer votre jeu sur Internet, vous pouvez utiliser ngrok:
 
 ```bash
-ngrok http 80
+ngrok http 7080
 ```
 
 Ngrok générera une URL publique (ex: `https://xxxx.ngrok.io`) que vous pourrez partager.
