@@ -8,6 +8,11 @@ class CubeRenderer {
         this.edges = null;
         this.is3D = false;
         this.animationId = null;
+        this.currentColor = '#000000';
+        this.paintedPixels = [];
+        this.gridResolution = 16;
+        this.textures = {};
+        this.activeFace = 'top';
 
         this.init();
     }
@@ -32,7 +37,7 @@ class CubeRenderer {
         this.container.appendChild(this.renderer.domElement);
 
         // Initial 2D square (outline only)
-        this.createCube('#000000', false);
+        this.createCube(this.currentColor, false);
 
         // Lighting (for 3D mode)
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -54,6 +59,9 @@ class CubeRenderer {
         if (this.cube) {
             this.scene.remove(this.cube);
             this.cube.geometry.dispose();
+            if (this.cube.material.map) {
+                this.cube.material.map.dispose();
+            }
             this.cube.material.dispose();
         }
         if (this.edges) {
@@ -67,49 +75,161 @@ class CubeRenderer {
         // Geometry - flat for 2D, full cube for 3D
         const geometry = new THREE.BoxGeometry(2, 2, is3D ? 2 : 0.01);
 
-        // For 2D: invisible fill, only edges visible
-        // For 3D: visible fill with edges
-        const material = new THREE.MeshBasicMaterial({
-            color: color,
-            transparent: true,
-            opacity: 0,
-            side: THREE.DoubleSide
-        });
+        // Create material
+        let material;
+        if (this.paintedPixels.length > 0 && !is3D) {
+            // Use texture for painted pixels in 2D
+            const texture = this.createTexture('top');
+            material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 1,
+                side: THREE.DoubleSide
+            });
+        } else if (is3D && this.paintedPixels.length > 0) {
+            // Use different textures for each face in 3D
+            const materials = [
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide }),  // right
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide }),   // left
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide }),    // top
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide }), // bottom
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide }),  // front
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide })    // back
+            ];
+            material = materials;
+        } else {
+            // Simple color material
+            material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0,
+                side: THREE.DoubleSide
+            });
+        }
 
         this.cube = new THREE.Mesh(geometry, material);
         this.scene.add(this.cube);
 
-        // Create edges (the black outline)
+        // Create edges (the outline)
         const edgesGeometry = new THREE.EdgesGeometry(geometry);
         const edgesMaterial = new THREE.LineBasicMaterial({
-            color: 0x000000,
+            color: color === '#000000' ? 0x000000 : new THREE.Color(color),
             linewidth: 2
         });
         this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
         this.scene.add(this.edges);
     }
 
+    createTexture(face) {
+        const resolution = this.gridResolution;
+        const size = 512; // Texture size in pixels
+        const cellSize = size / resolution;
+
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Fill with white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+
+        // Draw painted pixels for this face
+        this.paintedPixels.forEach(pixel => {
+            if (pixel.face === face) {
+                ctx.fillStyle = pixel.color;
+                ctx.fillRect(
+                    pixel.x * cellSize,
+                    pixel.y * cellSize,
+                    cellSize,
+                    cellSize
+                );
+            }
+        });
+
+        // Create Three.js texture
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
+        return texture;
+    }
+
     updateColor(color) {
-        if (this.cube) {
-            this.cube.material.color.set(color);
+        this.currentColor = color;
+
+        // Update edges color
+        if (this.edges) {
+            this.edges.material.color.set(color);
         }
     }
 
-    enableFill() {
-        // Make the cube visible (filled)
-        if (this.cube) {
-            this.cube.material.opacity = 1.0;
-        }
+    updatePaintedPixels(pixels, resolution) {
+        this.paintedPixels = pixels;
+        this.gridResolution = resolution;
+
+        // Recreate cube with new textures
+        this.createCube(this.currentColor, this.is3D);
     }
 
     enable3D() {
-        // Recreate as 3D cube
-        const currentColor = this.cube ? this.cube.material.color.getStyle() : '#000000';
-        const currentOpacity = this.cube ? this.cube.material.opacity : 0;
-        this.createCube(currentColor, true);
-        if (currentOpacity > 0) {
-            this.cube.material.opacity = currentOpacity;
-        }
+        if (this.is3D) return;
+
+        // Smooth transition animation
+        this.animateTransitionTo3D();
+    }
+
+    animateTransitionTo3D() {
+        const startZ = 0.01;
+        const endZ = 2;
+        const duration = 2000; // 2 seconds
+        const startTime = Date.now();
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease in-out cubic
+            const eased = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+            const currentZ = startZ + (endZ - startZ) * eased;
+
+            // Update geometry
+            if (this.cube && !this.is3D) {
+                this.cube.geometry.dispose();
+                this.cube.geometry = new THREE.BoxGeometry(2, 2, currentZ);
+
+                if (this.edges) {
+                    this.edges.geometry.dispose();
+                    this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
+                }
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Transition complete
+                this.is3D = true;
+                this.createCube(this.currentColor, true);
+            }
+        };
+
+        animate();
+    }
+
+    setActiveFace(face) {
+        this.activeFace = face;
+        // Could add visual indication of which face is active
+    }
+
+    reset() {
+        this.currentColor = '#000000';
+        this.paintedPixels = [];
+        this.gridResolution = 16;
+        this.is3D = false;
+        this.createCube('#000000', false);
     }
 
     animate() {

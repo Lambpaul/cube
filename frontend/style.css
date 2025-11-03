@@ -81,6 +81,168 @@ body {
     z-index: 1;
 }
 
+/* Paint Grid Canvas */
+#paint-grid-canvas {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    cursor: crosshair;
+    z-index: 2;
+    border: 1px solid #000000;
+}
+
+/* UI Panel */
+#ui-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #000000;
+    padding: 20px;
+    max-width: 600px;
+    min-width: 300px;
+    z-index: 50;
+}
+
+.ui-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.ui-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.ui-section h3 {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+    font-weight: normal;
+}
+
+/* Primary Colors */
+.color-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.color-btn {
+    width: 50px;
+    height: 50px;
+    border: 2px solid #000000;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-btn.active {
+    border: 4px solid #000000;
+    transform: scale(1.15);
+}
+
+.color-progress {
+    font-size: 0.85rem;
+}
+
+.progress-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.progress-item.completed {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+/* Full Color Picker */
+#full-color-picker-panel input[type="color"] {
+    width: 100px;
+    height: 50px;
+    border: 2px solid #000000;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+#color-hex-input {
+    width: 100px;
+    padding: 8px;
+    border: 1px solid #000000;
+    font-family: 'Courier New', monospace;
+    margin-right: 10px;
+}
+
+#apply-color-btn {
+    padding: 8px 20px;
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#apply-color-btn:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+/* Paint Mode */
+.paint-info {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.paint-info span {
+    margin-right: 5px;
+}
+
+.paint-controls label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.paint-color-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#paint-color-swatch {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #000000;
+}
+
+/* 3D Mode */
+.face-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#face-select {
+    padding: 8px;
+    border: 1px solid #000000;
+    background: #ffffff;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+}
+
 /* Modal styles */
 .modal {
     position: fixed;
@@ -164,16 +326,20 @@ body {
 }
 
 /* Input styles */
-input[type="text"] {
-    width: 100%;
+input[type="text"],
+input[type="color"] {
     padding: 12px;
     border: 1px solid #000000;
     background: #ffffff;
     color: #000000;
     font-family: 'Courier New', monospace;
     font-size: 1rem;
-    margin-bottom: 10px;
     outline: none;
+}
+
+input[type="text"] {
+    width: 100%;
+    margin-bottom: 10px;
 }
 
 input[type="text"]:focus {
@@ -182,6 +348,22 @@ input[type="text"]:focus {
 
 input[type="text"]::placeholder {
     color: #999999;
+}
+
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Select styles */
+select {
+    padding: 8px;
+    border: 1px solid #000000;
+    background: #ffffff;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    outline: none;
 }
 
 /* Button styles */
@@ -226,6 +408,20 @@ button:hover {
         height: 300px;
     }
 
+    #paint-grid-canvas {
+        max-width: 90vw;
+        max-height: 90vw;
+    }
+
+    #ui-panel {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        max-width: none;
+        padding: 15px;
+    }
+
     .modal-content {
         padding: 30px 20px;
     }
@@ -239,6 +435,11 @@ button:hover {
     #cube-name-display {
         font-size: 0.8rem;
     }
+
+    .color-btn {
+        width: 40px;
+        height: 40px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -249,5 +450,14 @@ button:hover {
     #cube-container {
         width: 250px;
         height: 250px;
+    }
+
+    .ui-section h3 {
+        font-size: 0.9rem;
+    }
+
+    .color-btn {
+        width: 35px;
+        height: 35px;
     }
 }

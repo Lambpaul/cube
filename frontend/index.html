@@ -19,6 +19,80 @@
     <!-- Main cube container -->
     <div id="cube-container"></div>
 
+    <!-- Dynamic UI Panel (appears based on cube progress) -->
+    <div id="ui-panel" class="hidden">
+
+        <!-- Primary Colors Selector (unlocked at 200 clicks) -->
+        <div id="primary-colors-panel" class="ui-section hidden">
+            <h3>Primary Colors</h3>
+            <div class="color-buttons">
+                <button class="color-btn" data-color="#FF0000" style="background: #FF0000;" title="Red"></button>
+                <button class="color-btn" data-color="#0000FF" style="background: #0000FF;" title="Blue"></button>
+                <button class="color-btn" data-color="#FFFF00" style="background: #FFFF00;" title="Yellow"></button>
+            </div>
+            <div class="color-progress">
+                <div class="progress-item">
+                    <span>Red:</span>
+                    <span id="red-progress">0/100</span>
+                </div>
+                <div class="progress-item">
+                    <span>Blue:</span>
+                    <span id="blue-progress">0/100</span>
+                </div>
+                <div class="progress-item">
+                    <span>Yellow:</span>
+                    <span id="yellow-progress">0/100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Color Picker (unlocked after 100 worships each primary) -->
+        <div id="full-color-picker-panel" class="ui-section hidden">
+            <h3>Full Palette</h3>
+            <input type="color" id="full-color-picker" value="#000000">
+            <input type="text" id="color-hex-input" placeholder="#000000" maxlength="7">
+            <button id="apply-color-btn">Apply Color</button>
+        </div>
+
+        <!-- Paint Mode (unlocked at 500 clicks) -->
+        <div id="paint-mode-panel" class="ui-section hidden">
+            <h3>Paint Mode</h3>
+            <div class="paint-info">
+                <span>Pixels Available:</span>
+                <span id="pixels-available">0</span>
+                <span>/</span>
+                <span id="pixels-total">256</span>
+            </div>
+            <div class="paint-controls">
+                <label>
+                    <input type="checkbox" id="paint-mode-toggle">
+                    Enable Paint Mode
+                </label>
+            </div>
+            <div id="current-paint-color" class="paint-color-display">
+                <span>Paint Color:</span>
+                <div id="paint-color-swatch" style="background: #FF0000;"></div>
+            </div>
+        </div>
+
+        <!-- 3D Mode Controls (unlocked at 10000 clicks) -->
+        <div id="3d-mode-panel" class="ui-section hidden">
+            <h3>3D Mode</h3>
+            <div class="face-selector">
+                <label for="face-select">Select Face:</label>
+                <select id="face-select">
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="front">Front</option>
+                    <option value="back">Back</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                </select>
+            </div>
+        </div>
+
+    </div>
+
     <!-- Settings modal -->
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content">
@@ -49,6 +123,9 @@
             <button id="confirm-name-btn">Confirm</button>
         </div>
     </div>
+
+    <!-- Paint Grid Overlay (for 2D paint mode) -->
+    <canvas id="paint-grid-canvas" class="hidden"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
