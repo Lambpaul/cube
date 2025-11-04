@@ -833,6 +833,7 @@ body.dark-mode #settings-btn:hover {
 body.dark-mode #ui-panel {
     background: rgba(0, 0, 0, 0.9);
     color: #ffffff;
+    border: 2px solid #ffffff;
 }
 
 body.dark-mode .ui-section {
@@ -841,14 +842,6 @@ body.dark-mode .ui-section {
 
 body.dark-mode .ui-section h3 {
     color: #ffffff;
-}
-
-/* Dark mode - cadres blancs englobants pour les panels principaux */
-body.dark-mode #color-selection-panel,
-body.dark-mode #paint-mode-panel,
-body.dark-mode #3d-mode-panel {
-    border: 2px solid #ffffff;
-    padding: 15px;
 }
 
 /* Dark mode color picked display - ensure same padding */

@@ -228,9 +228,13 @@ class CubeRenderer {
 
         this.cube = new THREE.Mesh(geometry, material);
 
-        // Restore saved rotation if in 3D mode
-        if (is3D && savedRotation) {
+        // Set rotation - show top face by default
+        if (is3D && savedRotation && (savedRotation.x !== 0 || savedRotation.y !== 0 || savedRotation.z !== 0)) {
+            // Restore saved rotation if in 3D mode and not default
             this.cube.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
+        } else if (is3D) {
+            // Default 3D view: show top face
+            this.cube.rotation.x = -Math.PI / 2; // Rotate to show top face
         }
 
         this.scene.add(this.cube);
@@ -243,9 +247,13 @@ class CubeRenderer {
         });
         this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
 
-        // Restore saved rotation for edges too
-        if (is3D && savedRotation) {
+        // Set rotation to match cube
+        if (is3D && savedRotation && (savedRotation.x !== 0 || savedRotation.y !== 0 || savedRotation.z !== 0)) {
+            // Restore saved rotation for edges too
             this.edges.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
+        } else if (is3D) {
+            // Default 3D view: show top face
+            this.edges.rotation.x = -Math.PI / 2;
         }
 
         this.scene.add(this.edges);
@@ -320,6 +328,7 @@ class CubeRenderer {
         // This prevents the "all faces showing same texture" bug during animation
         let materials3D = null;
         let materialsApplied = false;
+        let rotationApplied = false;
 
         if (this.paintedPixels.length > 0) {
             materials3D = [
@@ -345,6 +354,15 @@ class CubeRenderer {
 
             // Update geometry
             if (this.cube && !this.is3D) {
+                // Apply rotation to show top face at the start of animation
+                if (!rotationApplied) {
+                    this.cube.rotation.x = -Math.PI / 2;
+                    if (this.edges) {
+                        this.edges.rotation.x = -Math.PI / 2;
+                    }
+                    rotationApplied = true;
+                }
+
                 // Apply 3D materials on first frame
                 if (materials3D && !materialsApplied) {
                     // Dispose old material
