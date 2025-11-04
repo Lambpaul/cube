@@ -90,12 +90,6 @@ const cubeSchema = new mongoose.Schema({
         default: false
     },
 
-    // UI Preferences
-    darkMode: {
-        type: Boolean,
-        default: false
-    },
-
     // Worship tracking (SECURITY: counter only goes up, never decremented)
     // Used as progressive threshold system, NOT as spendable currency
     totalWorships: {
@@ -613,42 +607,6 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error painting pixel:', error);
             socket.emit('error', { message: 'Failed to paint pixel' });
-        }
-    });
-
-    // Toggle dark mode
-    socket.on('toggleDarkMode', async ({ cubeName, darkMode }) => {
-        try {
-            // Security: Validate inputs
-            if (!cubeName || typeof cubeName !== 'string' || !isValidCubeName(cubeName)) {
-                socket.emit('error', { message: 'Invalid cube name' });
-                return;
-            }
-
-            if (typeof darkMode !== 'boolean') {
-                socket.emit('error', { message: 'Invalid dark mode value' });
-                return;
-            }
-
-            const cube = await Cube.findById(cubeName);
-
-            if (!cube) {
-                socket.emit('error', { message: 'Cube not found' });
-                return;
-            }
-
-            // Update dark mode preference
-            cube.darkMode = darkMode;
-            cube.lastInteraction = new Date();
-            await cube.save();
-
-            // Broadcast updated state to all users in the room
-            io.to(cubeName).emit('cubeState', cube);
-
-            console.log(`Cube ${cubeName} dark mode ${darkMode ? 'enabled' : 'disabled'}`);
-        } catch (error) {
-            console.error('Error toggling dark mode:', error);
-            socket.emit('error', { message: 'Failed to toggle dark mode' });
         }
     });
 

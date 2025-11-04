@@ -82,6 +82,11 @@ function init() {
         welcomeText.classList.add('fade-out');
     }, 10000);
 
+    // Load dark mode preference from localStorage
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    darkModeToggle.checked = savedDarkMode;
+    applyDarkMode(savedDarkMode);
+
     // Start with a local cube
     startLocalCube();
 
@@ -377,12 +382,6 @@ function updateCubeState(cube) {
         currentCubeName = cube._id;
     }
 
-    // Update dark mode state
-    if (cube.darkMode !== undefined) {
-        darkModeToggle.checked = cube.darkMode;
-        applyDarkMode(cube.darkMode);
-    }
-
     // Update dynamic UI
     updateDynamicUI(cube);
 
@@ -630,15 +629,13 @@ function showSparklingEffect() {
     }
 }
 
-// Toggle dark mode
+// Toggle dark mode (client-side only, saved in localStorage)
 function toggleDarkMode(darkMode) {
-    if (currentCubeName && isInDatabase) {
-        // Send to server to sync across all users
-        socket.emit('toggleDarkMode', { cubeName: currentCubeName, darkMode });
-    } else {
-        // Local cube only
-        applyDarkMode(darkMode);
-    }
+    // Save preference to localStorage
+    localStorage.setItem('darkMode', darkMode.toString());
+
+    // Apply dark mode
+    applyDarkMode(darkMode);
 }
 
 // Apply dark mode styling
