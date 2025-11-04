@@ -448,7 +448,7 @@ io.on('connection', (socket) => {
             // Check if cube already exists
             const existingCube = await Cube.findById(cubeName);
             if (existingCube) {
-                socket.emit('error', { message: 'A cube with this name already exists' });
+                socket.emit('error', { message: 'This essence already exists in the Cube dimension' });
                 return;
             }
 

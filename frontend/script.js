@@ -52,6 +52,7 @@ const copyIdBtn = document.getElementById('copy-id-btn');
 const cubeNameInput = document.getElementById('cube-name-input');
 const confirmNameBtn = document.getElementById('confirm-name-btn');
 const currentCubeSection = document.getElementById('current-cube-section');
+const cubeNameError = document.getElementById('cube-name-error');
 
 // Dark mode elements
 const darkModeToggle = document.getElementById('dark-mode-toggle-checkbox');
@@ -121,6 +122,9 @@ function initSocket() {
             showMysticalError('insufficient_worships');
         } else if (error.message && error.message.includes('not unlocked')) {
             showMysticalError('not_unlocked');
+        } else if (error.message && error.message.includes('already exists')) {
+            // Show error under the name input field
+            showCubeNameError('This essence is already bound to another Cube...');
         } else {
             showMysticalError('default');
         }
@@ -155,6 +159,9 @@ function startLocalCube() {
     colorSelectionPanel.classList.add('hidden');
     paintModePanel.classList.add('hidden');
     mode3DPanel.classList.add('hidden');
+
+    // Hide name error
+    hideCubeNameError();
 
     // Disable paint mode
     paintModeEnabled = false;
@@ -241,6 +248,11 @@ function setupEventListeners() {
         if (e.key === 'Enter') {
             confirmNameBtn.click();
         }
+    });
+
+    // Hide error when user types
+    cubeNameInput.addEventListener('input', () => {
+        hideCubeNameError();
     });
 
     // Click on cube to worship
@@ -596,6 +608,18 @@ function showMysticalError(errorType) {
 
     const message = messages[errorType] || messages['default'];
     showUnlockMessage(message);
+}
+
+// Show error message under cube name input
+function showCubeNameError(message) {
+    cubeNameError.textContent = message;
+    cubeNameError.classList.remove('hidden');
+}
+
+// Hide cube name error
+function hideCubeNameError() {
+    cubeNameError.classList.add('hidden');
+    cubeNameError.textContent = '';
 }
 
 // Show sparkling effect
