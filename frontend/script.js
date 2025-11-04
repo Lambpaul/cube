@@ -6,7 +6,7 @@ let localClicks = 0;
 let isInDatabase = false;
 let currentCubeData = null;
 let paintModeEnabled = false;
-let currentPaintColor = '#FF0000';
+let selectedColor = '#FF0000'; // Currently selected color
 let selectedFace = 'top';
 
 // UI Elements
@@ -19,23 +19,20 @@ const cubeContainer = document.getElementById('cube-container');
 const uiPanel = document.getElementById('ui-panel');
 
 // UI Sections
-const primaryColorsPanel = document.getElementById('primary-colors-panel');
-const fullColorPickerPanel = document.getElementById('full-color-picker-panel');
+const colorSelectionPanel = document.getElementById('color-selection-panel');
+const fullColorPickerSection = document.getElementById('full-color-picker-section');
 const paintModePanel = document.getElementById('paint-mode-panel');
 const mode3DPanel = document.getElementById('3d-mode-panel');
 
-// Primary Colors Elements
+// Color Elements
 const colorButtons = document.querySelectorAll('.color-btn');
-
-// Full Color Picker Elements
+const colorPickedSwatch = document.getElementById('color-picked-swatch');
 const fullColorPicker = document.getElementById('full-color-picker');
 const colorHexInput = document.getElementById('color-hex-input');
-const setPaintColorBtn = document.getElementById('set-paint-color-btn');
 const applyOutlineBtn = document.getElementById('apply-outline-btn');
 
 // Paint Mode Elements
 const paintModeToggle = document.getElementById('paint-mode-toggle');
-const paintColorSwatch = document.getElementById('paint-color-swatch');
 const paintGridCanvas = document.getElementById('paint-grid-canvas');
 
 // 3D Mode Elements
@@ -140,8 +137,21 @@ function startLocalCube() {
     isInDatabase = false;
     currentCubeName = null;
     currentCubeData = null;
+    selectedColor = '#FF0000';
+
+    // Hide all UI elements
     topLeftPanel.classList.add('hidden');
     currentCubeSection.classList.add('hidden');
+    uiPanel.classList.add('hidden');
+    uiToggleBtn.classList.add('hidden');
+    colorSelectionPanel.classList.add('hidden');
+    paintModePanel.classList.add('hidden');
+    mode3DPanel.classList.add('hidden');
+
+    // Disable paint mode
+    paintModeEnabled = false;
+    if (paintModeToggle) paintModeToggle.checked = false;
+    disablePaintMode();
 
     // Reset renderer
     if (cubeRenderer) {
@@ -232,11 +242,11 @@ function setupEventListeners() {
         }
     });
 
-    // Primary color buttons (only change paint color, not outline)
+    // Primary color buttons
     colorButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const color = btn.dataset.color;
-            setPaintColor(color);
+            selectColor(color);
 
             // Update active state
             colorButtons.forEach(b => b.classList.remove('active'));
@@ -247,24 +257,19 @@ function setupEventListeners() {
     // Full color picker
     fullColorPicker.addEventListener('input', (e) => {
         colorHexInput.value = e.target.value;
+        selectColor(e.target.value);
     });
 
     colorHexInput.addEventListener('input', (e) => {
         if (e.target.value.match(/^#[0-9A-Fa-f]{6}$/)) {
             fullColorPicker.value = e.target.value;
+            selectColor(e.target.value);
         }
-    });
-
-    // Set paint color button (free, only changes paint color)
-    setPaintColorBtn.addEventListener('click', () => {
-        const color = fullColorPicker.value;
-        setPaintColor(color);
     });
 
     // Apply to outline button (costs worships, changes cube outline)
     applyOutlineBtn.addEventListener('click', () => {
-        const color = fullColorPicker.value;
-        changeCubeOutlineColor(color);
+        changeCubeOutlineColor(selectedColor);
     });
 
     // Paint mode toggle
@@ -375,20 +380,19 @@ function updateDynamicUI(cube) {
     const unlocked = cube.unlocked || [];
     let hasAnyUI = false;
 
-    // Primary Colors (200 clicks)
+    // Color Selection Panel (200 clicks)
     if (unlocked.includes('primary_colors')) {
-        primaryColorsPanel.classList.remove('hidden');
+        colorSelectionPanel.classList.remove('hidden');
         hasAnyUI = true;
-    } else {
-        primaryColorsPanel.classList.add('hidden');
-    }
 
-    // Full Color Picker (all colors unlocked)
-    if (cube.allColorsUnlocked) {
-        fullColorPickerPanel.classList.remove('hidden');
-        hasAnyUI = true;
+        // Full Color Picker within Color Selection (all colors unlocked)
+        if (cube.allColorsUnlocked) {
+            fullColorPickerSection.classList.remove('hidden');
+        } else {
+            fullColorPickerSection.classList.add('hidden');
+        }
     } else {
-        fullColorPickerPanel.classList.add('hidden');
+        colorSelectionPanel.classList.add('hidden');
     }
 
     // Paint Mode (500 clicks)
@@ -442,10 +446,16 @@ function updateCubeRenderer(cube) {
     }
 }
 
-// Set paint color only (no cost, doesn't change outline)
-function setPaintColor(color) {
-    currentPaintColor = color;
-    paintColorSwatch.style.background = color;
+// Select a color (updates the color picked display)
+function selectColor(color) {
+    selectedColor = color;
+    colorPickedSwatch.style.background = color;
+
+    // Also update the color picker inputs if needed
+    if (fullColorPicker && fullColorPicker.value !== color) {
+        fullColorPicker.value = color;
+        colorHexInput.value = color;
+    }
 }
 
 // Change cube outline color (costs worships)
@@ -536,7 +546,7 @@ function handlePaintClick(e) {
         face: selectedFace,
         x: gridX,
         y: gridY,
-        color: currentPaintColor
+        color: selectedColor
     });
 
     // Don't update optimistically - wait for server response
@@ -576,21 +586,33 @@ function showMysticalError(errorType) {
 
 // Show sparkling effect
 function showSparklingEffect() {
-    // Create sparkling element at cursor or center of cube
+    // Create multiple sparkle particles around the cube center
     const cubeRect = cubeContainer.getBoundingClientRect();
     const centerX = cubeRect.left + cubeRect.width / 2;
     const centerY = cubeRect.top + cubeRect.height / 2;
 
-    const sparkle = document.createElement('div');
-    sparkle.className = 'sparkle-effect';
-    sparkle.style.left = centerX + 'px';
-    sparkle.style.top = centerY + 'px';
-    document.body.appendChild(sparkle);
+    // Create 5-8 sparkle particles at random positions around center
+    const particleCount = 5 + Math.floor(Math.random() * 4);
+    const radius = 60; // Distance from center
 
-    // Remove after animation
-    setTimeout(() => {
-        sparkle.remove();
-    }, 1000);
+    for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+        const distance = radius * (0.5 + Math.random() * 0.5);
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+
+        const particle = document.createElement('div');
+        particle.className = 'sparkle-particle';
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
+        particle.style.animationDelay = (i * 0.05) + 's';
+        document.body.appendChild(particle);
+
+        // Remove after animation
+        setTimeout(() => {
+            particle.remove();
+        }, 1000);
+    }
 }
 
 // Initialize on page load

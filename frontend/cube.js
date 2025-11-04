@@ -155,6 +155,16 @@ class CubeRenderer {
     }
 
     createCube(color, is3D = false) {
+        // Save current rotation before removing cube
+        let savedRotation = { x: 0, y: 0, z: 0 };
+        if (this.cube && this.is3D) {
+            savedRotation = {
+                x: this.cube.rotation.x,
+                y: this.cube.rotation.y,
+                z: this.cube.rotation.z
+            };
+        }
+
         // Remove existing cube and edges
         if (this.cube) {
             this.scene.remove(this.cube);
@@ -217,6 +227,12 @@ class CubeRenderer {
         }
 
         this.cube = new THREE.Mesh(geometry, material);
+
+        // Restore saved rotation if in 3D mode
+        if (is3D && savedRotation) {
+            this.cube.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
+        }
+
         this.scene.add(this.cube);
 
         // Create edges (the outline)
@@ -226,6 +242,12 @@ class CubeRenderer {
             linewidth: 2
         });
         this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+
+        // Restore saved rotation for edges too
+        if (is3D && savedRotation) {
+            this.edges.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
+        }
+
         this.scene.add(this.edges);
     }
 

@@ -21,23 +21,37 @@
         <!-- Dynamic UI Panel (appears based on cube progress) -->
         <div id="ui-panel" class="hidden">
 
-        <!-- Primary Colors Selector (unlocked at 200 clicks) -->
-        <div id="primary-colors-panel" class="ui-section hidden">
-            <h3>Primary Colors</h3>
-            <div class="color-buttons">
-                <button class="color-btn" data-color="#FF0000" style="background: #FF0000;" title="Red"></button>
-                <button class="color-btn" data-color="#0000FF" style="background: #0000FF;" title="Blue"></button>
-                <button class="color-btn" data-color="#FFFF00" style="background: #FFFF00;" title="Yellow"></button>
-            </div>
-        </div>
+        <!-- Color Selection (unlocked at 200 clicks) -->
+        <div id="color-selection-panel" class="ui-section hidden">
+            <h3>Color Selection</h3>
 
-        <!-- Full Color Picker (unlocked after 100 worships each primary) -->
-        <div id="full-color-picker-panel" class="ui-section hidden">
-            <h3>Full Palette</h3>
-            <input type="color" id="full-color-picker" value="#000000">
-            <input type="text" id="color-hex-input" placeholder="#000000" maxlength="7">
-            <button id="set-paint-color-btn">Set Paint Color</button>
-            <button id="apply-outline-btn">Apply to Outline</button>
+            <!-- Color Picked Display -->
+            <div class="color-picked-display">
+                <span>Color Picked:</span>
+                <div id="color-picked-swatch" style="background: #FF0000;"></div>
+            </div>
+
+            <!-- Primary Colors -->
+            <div id="primary-colors-section">
+                <div class="color-buttons">
+                    <button class="color-btn" data-color="#FF0000" style="background: #FF0000;" title="Red"></button>
+                    <button class="color-btn" data-color="#0000FF" style="background: #0000FF;" title="Blue"></button>
+                    <button class="color-btn" data-color="#FFFF00" style="background: #FFFF00;" title="Yellow"></button>
+                </div>
+            </div>
+
+            <!-- Full Color Picker (unlocked after 100 worships each primary) -->
+            <div id="full-color-picker-section" class="hidden">
+                <div class="color-picker-controls">
+                    <input type="color" id="full-color-picker" value="#FF0000">
+                    <input type="text" id="color-hex-input" placeholder="#FF0000" maxlength="7" value="#FF0000">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="color-actions">
+                <button id="apply-outline-btn">Apply to Outline</button>
+            </div>
         </div>
 
         <!-- Paint Mode (unlocked at 500 clicks) -->
@@ -48,10 +62,6 @@
                     <input type="checkbox" id="paint-mode-toggle">
                     Enable Paint Mode
                 </label>
-            </div>
-            <div id="current-paint-color" class="paint-color-display">
-                <span>Paint Color:</span>
-                <div id="paint-color-swatch" style="background: #FF0000;"></div>
             </div>
         </div>
 

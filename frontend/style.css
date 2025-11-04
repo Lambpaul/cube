@@ -54,40 +54,50 @@ body {
 }
 
 /* Sparkling effect */
-.sparkle-effect {
+.sparkle-particle {
     position: fixed;
-    width: 20px;
-    height: 20px;
-    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    background: #000000;
+    border-radius: 50%;
     pointer-events: none;
     z-index: 999;
+    animation: sparkle-fade 0.8s ease-out forwards;
 }
 
-.sparkle-effect::before,
-.sparkle-effect::after {
+.sparkle-particle::before,
+.sparkle-particle::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 2px;
-    height: 20px;
     background: #000000;
-    transform: translate(-50%, -50%);
-    animation: sparkle-fade 1s ease-out forwards;
 }
 
-.sparkle-effect::after {
-    transform: translate(-50%, -50%) rotate(90deg);
+.sparkle-particle::before {
+    width: 12px;
+    height: 1px;
+    transform: translate(-50%, -50%);
+}
+
+.sparkle-particle::after {
+    width: 1px;
+    height: 12px;
+    transform: translate(-50%, -50%);
 }
 
 @keyframes sparkle-fade {
     0% {
         opacity: 1;
+        transform: translate(-50%, -50%) scale(0);
+    }
+    50% {
+        opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(2);
+        transform: translate(-50%, -50%) scale(1.5);
     }
 }
 
@@ -256,13 +266,43 @@ body {
     text-decoration: line-through;
 }
 
-/* Full Color Picker */
-#full-color-picker-panel input[type="color"] {
-    width: 100px;
-    height: 50px;
+/* Color Selection Panel */
+.color-picked-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+#color-picked-swatch {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #000000;
+    flex-shrink: 0;
+}
+
+#primary-colors-section {
+    margin-bottom: 15px;
+}
+
+#full-color-picker-section {
+    margin-bottom: 15px;
+}
+
+.color-picker-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-picker-controls input[type="color"] {
+    width: 60px;
+    height: 40px;
     border: 2px solid #000000;
     cursor: pointer;
-    margin-right: 10px;
 }
 
 #color-hex-input {
@@ -270,61 +310,35 @@ body {
     padding: 8px;
     border: 1px solid #000000;
     font-family: 'Courier New', monospace;
-    margin-right: 10px;
 }
 
-#set-paint-color-btn,
+.color-actions {
+    margin-top: 15px;
+}
+
 #apply-outline-btn {
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: #000000;
     color: #ffffff;
     border: 2px solid #000000;
     font-family: 'Courier New', monospace;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.85rem;
-    margin: 5px 5px 0 0;
-    display: inline-block;
+    font-size: 0.9rem;
+    width: 100%;
 }
 
-#set-paint-color-btn:hover,
 #apply-outline-btn:hover {
     background: #ffffff;
     color: #000000;
 }
 
-#full-color-picker-panel .button-group {
-    margin-top: 10px;
-}
-
 /* Paint Mode */
-.paint-info {
-    margin-bottom: 15px;
-    font-size: 0.9rem;
-}
-
-.paint-info span {
-    margin-right: 5px;
-}
-
 .paint-controls label {
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
-}
-
-.paint-color-display {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-#paint-color-swatch {
-    width: 30px;
-    height: 30px;
-    border: 2px solid #000000;
 }
 
 /* 3D Mode */
