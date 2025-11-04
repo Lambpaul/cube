@@ -368,6 +368,17 @@ class CubeRenderer {
                     }
                     this.cube.material = materials3D;
                     materialsApplied = true;
+
+                    // Set rotation immediately to show top face from the start
+                    // This ensures the top face is facing the user from frame 1
+                    if (this.cube) {
+                        this.cube.rotation.x = Math.PI / 2; // +90 degrees
+                        this.cube.rotation.y = 0;
+                    }
+                    if (this.edges) {
+                        this.edges.rotation.x = Math.PI / 2;
+                        this.edges.rotation.y = 0;
+                    }
                 }
 
                 // Animate opacity of side faces (not top) to fade them in
@@ -382,20 +393,6 @@ class CubeRenderer {
                             mat.opacity = fadeEased;
                         }
                     });
-                }
-
-                // Animate rotation to maintain top view as cube gains depth
-                // Rotate from (0,0) to (+90°, 0) to keep looking at top face
-                const targetRotationX = Math.PI / 2; // +90 degrees
-                const currentRotationX = targetRotationX * eased;
-
-                if (this.cube) {
-                    this.cube.rotation.x = currentRotationX;
-                    this.cube.rotation.y = 0;
-                }
-                if (this.edges) {
-                    this.edges.rotation.x = currentRotationX;
-                    this.edges.rotation.y = 0;
                 }
 
                 this.cube.geometry.dispose();
