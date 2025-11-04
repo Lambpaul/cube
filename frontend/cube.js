@@ -319,8 +319,6 @@ class CubeRenderer {
     }
 
     animateTransitionTo3D() {
-        const startZ = 0.01;
-        const endZ = 2;
         const duration = 2000; // 2 seconds
         const startTime = Date.now();
 
@@ -345,63 +343,57 @@ class CubeRenderer {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Ease in-out cubic
+            // Ease in-out cubic for smooth fade
             const eased = progress < 0.5
                 ? 4 * progress * progress * progress
                 : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-            const currentZ = startZ + (endZ - startZ) * eased;
-
-            // Update geometry
-            if (this.cube && !this.is3D) {
-                // Apply 3D materials on first frame
-                if (materials3D && !materialsApplied) {
-                    // Dispose old material
-                    if (Array.isArray(this.cube.material)) {
-                        this.cube.material.forEach(mat => {
-                            if (mat.map) mat.map.dispose();
-                            mat.dispose();
-                        });
-                    } else {
-                        if (this.cube.material.map) this.cube.material.map.dispose();
-                        this.cube.material.dispose();
-                    }
-                    this.cube.material = materials3D;
-                    materialsApplied = true;
-
-                    // Set rotation immediately to show top face from the start
-                    // This ensures the top face is facing the user from frame 1
-                    if (this.cube) {
-                        this.cube.rotation.x = Math.PI / 2; // +90 degrees
-                        this.cube.rotation.y = 0;
-                    }
-                    if (this.edges) {
-                        this.edges.rotation.x = Math.PI / 2;
-                        this.edges.rotation.y = 0;
-                    }
-                }
-
-                // Animate opacity of side faces (not top) to fade them in
-                if (materials3D && materialsApplied) {
-                    // Fade in starts halfway through the depth animation
-                    const fadeProgress = Math.max(0, (progress - 0.5) * 2);
-                    const fadeEased = fadeProgress * fadeProgress; // Ease in quad
-
-                    // Fade in all faces except top (index 2)
-                    materials3D.forEach((mat, index) => {
-                        if (index !== 2) { // Not the top face
-                            mat.opacity = fadeEased;
-                        }
+            // First frame setup
+            if (this.cube && !this.is3D && !materialsApplied) {
+                // Dispose old material
+                if (Array.isArray(this.cube.material)) {
+                    this.cube.material.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        mat.dispose();
                     });
+                } else {
+                    if (this.cube.material.map) this.cube.material.map.dispose();
+                    this.cube.material.dispose();
                 }
 
+                // Apply 3D materials immediately
+                if (materials3D) {
+                    this.cube.material = materials3D;
+                }
+
+                // Create full 3D geometry immediately (no more animation of depth)
                 this.cube.geometry.dispose();
-                this.cube.geometry = new THREE.BoxGeometry(2, 2, currentZ);
+                this.cube.geometry = new THREE.BoxGeometry(2, 2, 2);
 
                 if (this.edges) {
                     this.edges.geometry.dispose();
                     this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
                 }
+
+                // Set rotation immediately to show top face from the start
+                this.cube.rotation.x = Math.PI / 2; // +90 degrees
+                this.cube.rotation.y = 0;
+                if (this.edges) {
+                    this.edges.rotation.x = Math.PI / 2;
+                    this.edges.rotation.y = 0;
+                }
+
+                materialsApplied = true;
+            }
+
+            // Animate opacity of side faces (not top) to fade them in
+            if (materials3D && materialsApplied) {
+                // Fade in all faces except top (index 2)
+                materials3D.forEach((mat, index) => {
+                    if (index !== 2) { // Not the top face
+                        mat.opacity = eased;
+                    }
+                });
             }
 
             if (progress < 1) {
@@ -409,23 +401,16 @@ class CubeRenderer {
             } else {
                 // Transition complete
                 this.is3D = true;
-                // Only recreate cube if we don't have painted pixels (materials already set)
-                if (!materials3D) {
-                    this.createCube(this.currentColor, true);
-                } else {
-                    // Just update the final geometry and ensure all faces are fully visible
-                    this.cube.geometry.dispose();
-                    this.cube.geometry = new THREE.BoxGeometry(2, 2, endZ);
-                    if (this.edges) {
-                        this.edges.geometry.dispose();
-                        this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
-                    }
-                    // Ensure all faces are fully opaque at the end
+
+                // Ensure all faces are fully opaque at the end
+                if (materials3D) {
                     materials3D.forEach(mat => mat.opacity = 1);
+                } else {
+                    // No painted pixels, create standard 3D cube
+                    this.createCube(this.currentColor, true);
                 }
 
                 // After animation completes, apply a subtle rotation to reveal it's 3D
-                // This happens gradually after the depth expansion
                 this.animateRevealRotation();
             }
         };
