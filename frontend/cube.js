@@ -373,6 +373,9 @@ class CubeRenderer {
                 if (this.edges) {
                     this.edges.geometry.dispose();
                     this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
+                    // Make edges material transparent to animate opacity
+                    this.edges.material.transparent = true;
+                    this.edges.material.opacity = 0;
                 }
 
                 // Set rotation immediately to show top face from the start
@@ -386,7 +389,7 @@ class CubeRenderer {
                 materialsApplied = true;
             }
 
-            // Animate opacity of side faces (not top) to fade them in
+            // Animate opacity of side faces (not top) and edges to fade them in
             if (materials3D && materialsApplied) {
                 // Fade in all faces except top (index 2)
                 materials3D.forEach((mat, index) => {
@@ -394,6 +397,11 @@ class CubeRenderer {
                         mat.opacity = eased;
                     }
                 });
+
+                // Also fade in the edges
+                if (this.edges) {
+                    this.edges.material.opacity = eased;
+                }
             }
 
             if (progress < 1) {
@@ -402,10 +410,14 @@ class CubeRenderer {
                 // Transition complete
                 this.is3D = true;
 
-                // Ensure all faces are fully opaque at the end
+                // Ensure all faces and edges are fully opaque at the end
                 if (materials3D) {
                     materials3D.forEach(mat => mat.opacity = 1);
-                } else {
+                }
+                if (this.edges && this.edges.material) {
+                    this.edges.material.opacity = 1;
+                }
+                if (!materials3D) {
                     // No painted pixels, create standard 3D cube
                     this.createCube(this.currentColor, true);
                 }
@@ -479,13 +491,15 @@ class CubeRenderer {
 
         // Rotate only in 3D mode and if auto-rotate is enabled
         if (this.cube && this.is3D && this.autoRotate) {
-            // Gentle rotation that keeps the top face as primary view
-            // Mainly rotate around Z axis (perpendicular to top face) with minimal X/Y drift
-            this.cube.rotation.z += 0.003;  // Main rotation around Z axis
-            this.cube.rotation.y += 0.001;  // Very subtle Y rotation for dynamic feel
+            // Balanced gentle rotation on all axes for smooth, natural movement
+            // This allows free manipulation without axis locking
+            this.cube.rotation.x += 0.001;
+            this.cube.rotation.y += 0.002;
+            this.cube.rotation.z += 0.0015;
             if (this.edges) {
-                this.edges.rotation.z += 0.003;
-                this.edges.rotation.y += 0.001;
+                this.edges.rotation.x += 0.001;
+                this.edges.rotation.y += 0.002;
+                this.edges.rotation.z += 0.0015;
             }
         }
 
