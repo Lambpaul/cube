@@ -840,6 +840,10 @@ body.dark-mode .ui-section {
     border-bottom: 1px solid #555555;
 }
 
+body.dark-mode .ui-section:last-child {
+    border-bottom: none;
+}
+
 body.dark-mode .ui-section h3 {
     color: #ffffff;
 }

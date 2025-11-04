@@ -328,7 +328,6 @@ class CubeRenderer {
         // This prevents the "all faces showing same texture" bug during animation
         let materials3D = null;
         let materialsApplied = false;
-        let rotationApplied = false;
 
         if (this.paintedPixels.length > 0) {
             materials3D = [
@@ -354,15 +353,6 @@ class CubeRenderer {
 
             // Update geometry
             if (this.cube && !this.is3D) {
-                // Apply rotation to show top face at the start of animation
-                if (!rotationApplied) {
-                    this.cube.rotation.x = -Math.PI / 2;
-                    if (this.edges) {
-                        this.edges.rotation.x = -Math.PI / 2;
-                    }
-                    rotationApplied = true;
-                }
-
                 // Apply 3D materials on first frame
                 if (materials3D && !materialsApplied) {
                     // Dispose old material
@@ -405,6 +395,44 @@ class CubeRenderer {
                         this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
                     }
                 }
+
+                // After animation completes, apply a subtle rotation to reveal it's 3D
+                // This happens gradually after the depth expansion
+                this.animateRevealRotation();
+            }
+        };
+
+        animate();
+    }
+
+    animateRevealRotation() {
+        // Gentle rotation to reveal the 3D nature after the depth animation
+        const duration = 1500; // 1.5 seconds
+        const startTime = Date.now();
+        const targetRotationX = -Math.PI / 6; // -30 degrees
+        const targetRotationY = Math.PI / 6;  // 30 degrees
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease out cubic for smooth deceleration
+            const eased = 1 - Math.pow(1 - progress, 3);
+
+            if (this.cube) {
+                this.cube.rotation.x = targetRotationX * eased;
+                this.cube.rotation.y = targetRotationY * eased;
+            }
+            if (this.edges) {
+                this.edges.rotation.x = targetRotationX * eased;
+                this.edges.rotation.y = targetRotationY * eased;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Animation complete, enable auto-rotation
+                this.autoRotate = true;
             }
         };
 
