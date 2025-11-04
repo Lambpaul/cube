@@ -159,10 +159,19 @@ class CubeRenderer {
         if (this.cube) {
             this.scene.remove(this.cube);
             this.cube.geometry.dispose();
-            if (this.cube.material.map) {
-                this.cube.material.map.dispose();
+
+            // Handle both single material and array of materials
+            if (Array.isArray(this.cube.material)) {
+                this.cube.material.forEach(mat => {
+                    if (mat.map) mat.map.dispose();
+                    mat.dispose();
+                });
+            } else {
+                if (this.cube.material.map) {
+                    this.cube.material.map.dispose();
+                }
+                this.cube.material.dispose();
             }
-            this.cube.material.dispose();
         }
         if (this.edges) {
             this.scene.remove(this.edges);

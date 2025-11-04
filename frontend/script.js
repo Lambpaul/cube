@@ -30,7 +30,8 @@ const colorButtons = document.querySelectorAll('.color-btn');
 // Full Color Picker Elements
 const fullColorPicker = document.getElementById('full-color-picker');
 const colorHexInput = document.getElementById('color-hex-input');
-const applyColorBtn = document.getElementById('apply-color-btn');
+const setPaintColorBtn = document.getElementById('set-paint-color-btn');
+const applyOutlineBtn = document.getElementById('apply-outline-btn');
 
 // Paint Mode Elements
 const paintModeToggle = document.getElementById('paint-mode-toggle');
@@ -108,9 +109,15 @@ function initSocket() {
 
     socket.on('error', (error) => {
         console.error('Socket error:', error);
-        // Don't show cube not found as alert, just log it
-        if (error.message !== 'Cube not found') {
-            alert(error.message || 'An error occurred');
+        // Show mystical error message
+        if (error.message === 'Cube not found') {
+            showMysticalError('cube_not_found');
+        } else if (error.message && error.message.includes('insufficient')) {
+            showMysticalError('insufficient_worships');
+        } else if (error.message && error.message.includes('not unlocked')) {
+            showMysticalError('not_unlocked');
+        } else {
+            showMysticalError('default');
         }
     });
 
@@ -225,11 +232,11 @@ function setupEventListeners() {
         }
     });
 
-    // Primary color buttons
+    // Primary color buttons (only change paint color, not outline)
     colorButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const color = btn.dataset.color;
-            changeCubeColor(color);
+            setPaintColor(color);
 
             // Update active state
             colorButtons.forEach(b => b.classList.remove('active'));
@@ -248,9 +255,16 @@ function setupEventListeners() {
         }
     });
 
-    applyColorBtn.addEventListener('click', () => {
+    // Set paint color button (free, only changes paint color)
+    setPaintColorBtn.addEventListener('click', () => {
         const color = fullColorPicker.value;
-        changeCubeColor(color);
+        setPaintColor(color);
+    });
+
+    // Apply to outline button (costs worships, changes cube outline)
+    applyOutlineBtn.addEventListener('click', () => {
+        const color = fullColorPicker.value;
+        changeCubeOutlineColor(color);
     });
 
     // Paint mode toggle
@@ -286,7 +300,7 @@ function joinCubeByName(cubeName) {
     // Listen for cube not found error
     socket.once('error', (error) => {
         if (error.message === 'Cube not found') {
-            alert(`Cube "${cubeName}" not found`);
+            showMysticalError('cube_not_found');
             settingsModal.classList.add('hidden');
             // Stay on local cube, don't update UI
         }
@@ -428,12 +442,18 @@ function updateCubeRenderer(cube) {
     }
 }
 
-// Change cube color
-function changeCubeColor(color) {
+// Set paint color only (no cost, doesn't change outline)
+function setPaintColor(color) {
+    currentPaintColor = color;
+    paintColorSwatch.style.background = color;
+}
+
+// Change cube outline color (costs worships)
+function changeCubeOutlineColor(color) {
     if (currentCubeName && isInDatabase) {
         socket.emit('changeCubeColor', { cubeName: currentCubeName, color });
-        currentPaintColor = color;
-        paintColorSwatch.style.background = color;
+    } else {
+        showMysticalError('not_unlocked');
     }
 }
 
@@ -441,7 +461,7 @@ function changeCubeColor(color) {
 function enablePaintMode() {
     if (!currentCubeData || !currentCubeData.unlocked.includes('paint_mode')) {
         paintModeToggle.checked = false;
-        alert('Paint mode not unlocked yet!');
+        showMysticalError('paint_not_unlocked');
         return;
     }
 
@@ -537,6 +557,21 @@ function showUnlockMessage(message) {
             unlockMessageEl.classList.add('hidden');
         }, 1000);
     }, 5000);
+}
+
+// Show mystical error message
+function showMysticalError(errorType) {
+    const messages = {
+        'insufficient_worships': "The Cube resists... your offering is insufficient",
+        'not_unlocked': "The Cube remains unchanged... this power eludes you",
+        'cube_not_found': "The Cube's essence is elsewhere... it cannot be found",
+        'cannot_change_color': "The Cube cannot shift its hue at this moment...",
+        'paint_not_unlocked': "The Cube does not yet accept your artistic touch...",
+        'default': "The Cube denies your request... something is amiss"
+    };
+
+    const message = messages[errorType] || messages['default'];
+    showUnlockMessage(message);
 }
 
 // Show sparkling effect

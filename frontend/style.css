@@ -273,19 +273,28 @@ body {
     margin-right: 10px;
 }
 
-#apply-color-btn {
-    padding: 8px 20px;
+#set-paint-color-btn,
+#apply-outline-btn {
+    padding: 8px 16px;
     background: #000000;
     color: #ffffff;
     border: 2px solid #000000;
     font-family: 'Courier New', monospace;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-size: 0.85rem;
+    margin: 5px 5px 0 0;
+    display: inline-block;
 }
 
-#apply-color-btn:hover {
+#set-paint-color-btn:hover,
+#apply-outline-btn:hover {
     background: #ffffff;
     color: #000000;
+}
+
+#full-color-picker-panel .button-group {
+    margin-top: 10px;
 }
 
 /* Paint Mode */
