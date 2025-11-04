@@ -330,13 +330,14 @@ class CubeRenderer {
         let materialsApplied = false;
 
         if (this.paintedPixels.length > 0) {
+            // Create materials with initial opacity: top face fully visible, others transparent
             materials3D = [
-                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true }),
-                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true }),
-                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true }),
-                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true }),
-                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true }),
-                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true })
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true, opacity: 0 }),  // right - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true, opacity: 0 }),   // left - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true, opacity: 1 }),    // top - fully visible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true, opacity: 0 }), // bottom - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true, opacity: 0 }),  // front - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true, opacity: 0 })    // back - start invisible
             ];
         }
 
@@ -369,6 +370,34 @@ class CubeRenderer {
                     materialsApplied = true;
                 }
 
+                // Animate opacity of side faces (not top) to fade them in
+                if (materials3D && materialsApplied) {
+                    // Fade in starts halfway through the depth animation
+                    const fadeProgress = Math.max(0, (progress - 0.5) * 2);
+                    const fadeEased = fadeProgress * fadeProgress; // Ease in quad
+
+                    // Fade in all faces except top (index 2)
+                    materials3D.forEach((mat, index) => {
+                        if (index !== 2) { // Not the top face
+                            mat.opacity = fadeEased;
+                        }
+                    });
+                }
+
+                // Animate rotation to maintain top view as cube gains depth
+                // Rotate from (0,0) to (-90°, 0) to keep looking at top face
+                const targetRotationX = -Math.PI / 2; // -90 degrees
+                const currentRotationX = targetRotationX * eased;
+
+                if (this.cube) {
+                    this.cube.rotation.x = currentRotationX;
+                    this.cube.rotation.y = 0;
+                }
+                if (this.edges) {
+                    this.edges.rotation.x = currentRotationX;
+                    this.edges.rotation.y = 0;
+                }
+
                 this.cube.geometry.dispose();
                 this.cube.geometry = new THREE.BoxGeometry(2, 2, currentZ);
 
@@ -387,13 +416,15 @@ class CubeRenderer {
                 if (!materials3D) {
                     this.createCube(this.currentColor, true);
                 } else {
-                    // Just update the final geometry
+                    // Just update the final geometry and ensure all faces are fully visible
                     this.cube.geometry.dispose();
                     this.cube.geometry = new THREE.BoxGeometry(2, 2, endZ);
                     if (this.edges) {
                         this.edges.geometry.dispose();
                         this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
                     }
+                    // Ensure all faces are fully opaque at the end
+                    materials3D.forEach(mat => mat.opacity = 1);
                 }
 
                 // After animation completes, apply a subtle rotation to reveal it's 3D
@@ -406,11 +437,17 @@ class CubeRenderer {
     }
 
     animateRevealRotation() {
-        // Gentle rotation to reveal the 3D nature after the depth animation
+        // Gentle rotation to reveal the 3D nature while keeping the top face as main view
         const duration = 1500; // 1.5 seconds
         const startTime = Date.now();
-        const targetRotationX = -Math.PI / 6; // -30 degrees
-        const targetRotationY = Math.PI / 6;  // 30 degrees
+
+        // Start from top view (looking down at the cube)
+        const startRotationX = -Math.PI / 2;  // -90 degrees (top view)
+        const startRotationY = 0;
+
+        // End with a subtle tilt to reveal it's 3D, but keep top face as primary view
+        const targetRotationX = -Math.PI / 2.5; // -72 degrees (mainly top view with slight tilt)
+        const targetRotationY = Math.PI / 12;   // 15 degrees (gentle rotation)
 
         const animate = () => {
             const elapsed = Date.now() - startTime;
@@ -419,13 +456,16 @@ class CubeRenderer {
             // Ease out cubic for smooth deceleration
             const eased = 1 - Math.pow(1 - progress, 3);
 
+            const currentRotationX = startRotationX + (targetRotationX - startRotationX) * eased;
+            const currentRotationY = startRotationY + (targetRotationY - startRotationY) * eased;
+
             if (this.cube) {
-                this.cube.rotation.x = targetRotationX * eased;
-                this.cube.rotation.y = targetRotationY * eased;
+                this.cube.rotation.x = currentRotationX;
+                this.cube.rotation.y = currentRotationY;
             }
             if (this.edges) {
-                this.edges.rotation.x = targetRotationX * eased;
-                this.edges.rotation.y = targetRotationY * eased;
+                this.edges.rotation.x = currentRotationX;
+                this.edges.rotation.y = currentRotationY;
             }
 
             if (progress < 1) {
@@ -457,12 +497,13 @@ class CubeRenderer {
 
         // Rotate only in 3D mode and if auto-rotate is enabled
         if (this.cube && this.is3D && this.autoRotate) {
-            // Slowed down rotation (was 0.005 and 0.01, now 0.002 and 0.004)
-            this.cube.rotation.x += 0.002;
-            this.cube.rotation.y += 0.004;
+            // Gentle rotation that keeps the top face as primary view
+            // Mainly rotate around Z axis (perpendicular to top face) with minimal X/Y drift
+            this.cube.rotation.z += 0.003;  // Main rotation around Z axis
+            this.cube.rotation.y += 0.001;  // Very subtle Y rotation for dynamic feel
             if (this.edges) {
-                this.edges.rotation.x += 0.002;
-                this.edges.rotation.y += 0.004;
+                this.edges.rotation.z += 0.003;
+                this.edges.rotation.y += 0.001;
             }
         }
 
