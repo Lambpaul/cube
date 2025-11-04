@@ -406,26 +406,37 @@ class CubeRenderer {
                 this.cube.geometry.dispose();
                 this.cube.geometry = new THREE.BoxGeometry(2, 2, 2);
 
-                // Keep existing edges for top face (already visible)
+                // Create edges only for the top face (4 lines forming a square)
+                // Top face vertices when rotated 90° around X axis
+                const topEdgesGeometry = new THREE.BufferGeometry();
+                const topEdgesVertices = new Float32Array([
+                    // Top face edges (square on XY plane at Z=1)
+                    -1, -1, 1,  1, -1, 1,  // bottom edge
+                     1, -1, 1,  1,  1, 1,  // right edge
+                     1,  1, 1, -1,  1, 1,  // top edge
+                    -1,  1, 1, -1, -1, 1   // left edge
+                ]);
+                topEdgesGeometry.setAttribute('position', new THREE.BufferAttribute(topEdgesVertices, 3));
+
                 if (this.edges) {
                     this.edges.geometry.dispose();
-                    this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
+                    this.edges.geometry = topEdgesGeometry;
                 }
 
-                // Create separate edges for side faces that will fade in
+                // Create separate edges for ALL cube edges that will fade in
                 if (this.sideEdges) {
                     this.scene.remove(this.sideEdges);
                     this.sideEdges.geometry.dispose();
                     this.sideEdges.material.dispose();
                 }
-                const sideEdgesGeometry = new THREE.EdgesGeometry(this.cube.geometry);
-                const sideEdgesMaterial = new THREE.LineBasicMaterial({
+                const allEdgesGeometry = new THREE.EdgesGeometry(this.cube.geometry);
+                const allEdgesMaterial = new THREE.LineBasicMaterial({
                     color: this.currentColor === '#000000' ? 0x000000 : new THREE.Color(this.currentColor),
                     linewidth: 2,
                     transparent: true,
                     opacity: 0
                 });
-                this.sideEdges = new THREE.LineSegments(sideEdgesGeometry, sideEdgesMaterial);
+                this.sideEdges = new THREE.LineSegments(allEdgesGeometry, allEdgesMaterial);
                 this.scene.add(this.sideEdges);
 
                 // Set rotation immediately to show top face from the start
@@ -471,6 +482,16 @@ class CubeRenderer {
                 if (this.sideEdges && this.sideEdges.material) {
                     this.sideEdges.material.opacity = 1;
                 }
+
+                // Remove the top-face-only edges and keep only sideEdges (which shows all edges)
+                if (this.edges) {
+                    this.scene.remove(this.edges);
+                    this.edges.geometry.dispose();
+                    this.edges.material.dispose();
+                    this.edges = this.sideEdges;
+                    this.sideEdges = null;
+                }
+
                 if (!materials3D) {
                     // No painted pixels, create standard 3D cube
                     this.createCube(this.currentColor, true);
