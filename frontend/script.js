@@ -26,9 +26,6 @@ const mode3DPanel = document.getElementById('3d-mode-panel');
 
 // Primary Colors Elements
 const colorButtons = document.querySelectorAll('.color-btn');
-const redProgress = document.getElementById('red-progress');
-const blueProgress = document.getElementById('blue-progress');
-const yellowProgress = document.getElementById('yellow-progress');
 
 // Full Color Picker Elements
 const fullColorPicker = document.getElementById('full-color-picker');
@@ -37,8 +34,6 @@ const applyColorBtn = document.getElementById('apply-color-btn');
 
 // Paint Mode Elements
 const paintModeToggle = document.getElementById('paint-mode-toggle');
-const pixelsAvailable = document.getElementById('pixels-available');
-const pixelsTotal = document.getElementById('pixels-total');
 const paintColorSwatch = document.getElementById('paint-color-swatch');
 const paintGridCanvas = document.getElementById('paint-grid-canvas');
 
@@ -121,6 +116,14 @@ function initSocket() {
 
     socket.on('disconnect', () => {
         console.log('Disconnected from server');
+    });
+
+    socket.on('unlockMessage', ({ message }) => {
+        showUnlockMessage(message);
+    });
+
+    socket.on('sparkling', ({ clicks }) => {
+        showSparklingEffect();
     });
 }
 
@@ -362,24 +365,6 @@ function updateDynamicUI(cube) {
     if (unlocked.includes('primary_colors')) {
         primaryColorsPanel.classList.remove('hidden');
         hasAnyUI = true;
-
-        // Update progress bars
-        if (cube.primaryColors) {
-            redProgress.textContent = `${cube.primaryColors.red.worships}/100`;
-            blueProgress.textContent = `${cube.primaryColors.blue.worships}/100`;
-            yellowProgress.textContent = `${cube.primaryColors.yellow.worships}/100`;
-
-            // Mark completed
-            if (cube.primaryColors.red.worships >= MILESTONES.PRIMARY_COLOR_MASTERY) {
-                redProgress.parentElement.classList.add('completed');
-            }
-            if (cube.primaryColors.blue.worships >= MILESTONES.PRIMARY_COLOR_MASTERY) {
-                blueProgress.parentElement.classList.add('completed');
-            }
-            if (cube.primaryColors.yellow.worships >= MILESTONES.PRIMARY_COLOR_MASTERY) {
-                yellowProgress.parentElement.classList.add('completed');
-            }
-        }
     } else {
         primaryColorsPanel.classList.add('hidden');
     }
@@ -396,11 +381,6 @@ function updateDynamicUI(cube) {
     if (unlocked.includes('paint_mode')) {
         paintModePanel.classList.remove('hidden');
         hasAnyUI = true;
-
-        // Update pixels info
-        const totalPixels = cube.gridResolution * cube.gridResolution;
-        pixelsAvailable.textContent = cube.availablePixels - (cube.paintedPixels?.length || 0);
-        pixelsTotal.textContent = totalPixels;
     } else {
         paintModePanel.classList.add('hidden');
     }
@@ -435,6 +415,11 @@ function updateCubeRenderer(cube) {
     // Update painted pixels
     if (cube.paintedPixels && cube.paintedPixels.length > 0) {
         cubeRenderer.updatePaintedPixels(cube.paintedPixels, cube.gridResolution);
+    }
+
+    // Redraw paint grid if paint mode is enabled
+    if (paintModeEnabled && !paintGridCanvas.classList.contains('hidden')) {
+        drawPaintGrid(cube.gridResolution);
     }
 
     // Enable 3D mode
@@ -525,13 +510,6 @@ function handlePaintClick(e) {
     const gridX = Math.floor(x / cellSize);
     const gridY = Math.floor(y / cellSize);
 
-    // Check if we have pixels available
-    const paintedCount = currentCubeData.paintedPixels?.length || 0;
-    if (paintedCount >= currentCubeData.availablePixels) {
-        alert('No more pixels available! Worship more to unlock pixels.');
-        return;
-    }
-
     // Send paint pixel request
     socket.emit('paintPixel', {
         cubeName: currentCubeName,
@@ -541,10 +519,43 @@ function handlePaintClick(e) {
         color: currentPaintColor
     });
 
-    // Optimistically update local canvas
-    const ctx = paintGridCanvas.getContext('2d');
-    ctx.fillStyle = currentPaintColor;
-    ctx.fillRect(gridX * cellSize, gridY * cellSize, cellSize, cellSize);
+    // Don't update optimistically - wait for server response
+    // This prevents conflicts in multiplayer mode
+}
+
+// Show mystical unlock message
+function showUnlockMessage(message) {
+    const unlockMessageEl = document.getElementById('unlock-message');
+    unlockMessageEl.textContent = message;
+    unlockMessageEl.classList.remove('hidden');
+    unlockMessageEl.classList.add('show');
+
+    // Fade out after 5 seconds
+    setTimeout(() => {
+        unlockMessageEl.classList.remove('show');
+        setTimeout(() => {
+            unlockMessageEl.classList.add('hidden');
+        }, 1000);
+    }, 5000);
+}
+
+// Show sparkling effect
+function showSparklingEffect() {
+    // Create sparkling element at cursor or center of cube
+    const cubeRect = cubeContainer.getBoundingClientRect();
+    const centerX = cubeRect.left + cubeRect.width / 2;
+    const centerY = cubeRect.top + cubeRect.height / 2;
+
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle-effect';
+    sparkle.style.left = centerX + 'px';
+    sparkle.style.top = centerY + 'px';
+    document.body.appendChild(sparkle);
+
+    // Remove after animation
+    setTimeout(() => {
+        sparkle.remove();
+    }, 1000);
 }
 
 // Initialize on page load

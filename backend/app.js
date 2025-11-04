@@ -88,6 +88,20 @@ const cubeSchema = new mongoose.Schema({
         default: false
     },
 
+    // Worship tracking (counter only goes up)
+    totalWorships: {
+        type: Number,
+        default: 0
+    },
+    colorChangesCount: {
+        type: Number,
+        default: 0
+    },
+    pixelActionsCount: {
+        type: Number,
+        default: 0
+    },
+
     createdAt: {
         type: Date,
         default: Date.now
@@ -110,7 +124,8 @@ const MILESTONES = {
     MODE_3D: 10000
 };
 
-const PIXEL_PER_WORSHIPS = 100;
+const PIXEL_PER_WORSHIPS = 50; // Changed from 100 to 50
+const COLOR_CHANGE_COST = 100; // Cost to change outline color
 
 const PRIMARY_COLORS = {
     red: '#FF0000',
@@ -118,9 +133,19 @@ const PRIMARY_COLORS = {
     yellow: '#FFFF00'
 };
 
+// Mystical messages for unlocks
+const UNLOCK_MESSAGES = {
+    primary_colors: "The Cube reveals its essence... the primordial trinity emerges",
+    all_colors: "Boundaries dissolve... the spectrum bends to your will",
+    paint_mode: "The Cube accepts your offering... shape its form with devotion",
+    high_res: "Reality sharpens... details once hidden now revealed",
+    mode_3d: "The veil lifts... behold the Cube in all its dimensions"
+};
+
 // Check and unlock features based on clicks
 function checkUnlocks(cube) {
     const previousUnlocked = [...cube.unlocked];
+    let unlockMessage = null;
 
     // Check primary colors unlock (200 clicks)
     if (cube.clicks >= MILESTONES.PRIMARY_COLORS && !cube.unlocked.includes('primary_colors')) {
@@ -128,6 +153,7 @@ function checkUnlocks(cube) {
         cube.primaryColors.red.unlocked = true;
         cube.primaryColors.blue.unlocked = true;
         cube.primaryColors.yellow.unlocked = true;
+        unlockMessage = UNLOCK_MESSAGES.primary_colors;
     }
 
     // Check if all colors should be unlocked (100 worships each)
@@ -138,17 +164,20 @@ function checkUnlocks(cube) {
         cube.allColorsUnlocked = true;
         if (!cube.unlocked.includes('all_colors')) {
             cube.unlocked.push('all_colors');
+            unlockMessage = UNLOCK_MESSAGES.all_colors;
         }
     }
 
     // Check paint mode unlock (500 clicks)
     if (cube.clicks >= MILESTONES.PAINT_MODE && !cube.unlocked.includes('paint_mode')) {
         cube.unlocked.push('paint_mode');
+        unlockMessage = UNLOCK_MESSAGES.paint_mode;
     }
 
     // Check high resolution unlock (2000 clicks)
     if (cube.clicks >= MILESTONES.HIGH_RES && !cube.unlocked.includes('high_res')) {
         cube.unlocked.push('high_res');
+        unlockMessage = UNLOCK_MESSAGES.high_res;
 
         // Scale existing pixels from 16x16 to 64x64 to maintain relative position
         const oldResolution = cube.gridResolution;
@@ -163,16 +192,23 @@ function checkUnlocks(cube) {
         cube.gridResolution = newResolution;
     }
 
-    // Check 3D mode unlock (10000 clicks)
+    // Check 3D mode unlock (10000 clicks + all pixels of one face colored)
     if (cube.clicks >= MILESTONES.MODE_3D && !cube.unlocked.includes('mode_3d')) {
-        cube.unlocked.push('mode_3d');
-        cube.is3D = true;
+        // Count pixels colored on 'top' face
+        const topFacePixels = cube.paintedPixels.filter(p => p.face === 'top');
+        const requiredPixels = cube.gridResolution * cube.gridResolution;
+
+        if (topFacePixels.length >= requiredPixels) {
+            cube.unlocked.push('mode_3d');
+            cube.is3D = true;
+            unlockMessage = UNLOCK_MESSAGES.mode_3d;
+        }
     }
 
-    // Update available pixels
-    cube.availablePixels = Math.floor(cube.clicks / PIXEL_PER_WORSHIPS);
-
-    return cube.unlocked.length !== previousUnlocked.length;
+    return {
+        hasNewUnlocks: cube.unlocked.length !== previousUnlocked.length,
+        message: unlockMessage
+    };
 }
 
 // Create a new cube with a name (called when user names the cube at 100 clicks)
@@ -196,6 +232,7 @@ app.post('/api/cube', async (req, res) => {
         const cube = new Cube({
             _id: cubeName,
             clicks: clicks || 100,
+            totalWorships: clicks || 100,
             unlocked: ['name']
         });
 
@@ -282,6 +319,7 @@ io.on('connection', (socket) => {
             }
 
             cube.clicks += 1;
+            cube.totalWorships += 1; // Track total worships for spending
             cube.lastInteraction = new Date();
 
             // Track worships for current color if primary colors are unlocked
@@ -296,14 +334,24 @@ io.on('connection', (socket) => {
             }
 
             // Check for new unlocks
-            checkUnlocks(cube);
+            const unlockResult = checkUnlocks(cube);
 
             await cube.save();
 
             // Broadcast updated state to all users in the room
             io.to(cubeName).emit('cubeState', cube);
 
-            console.log(`Cube ${cubeName} clicked. Total clicks: ${cube.clicks}`);
+            // Emit unlock message if there's one
+            if (unlockResult.message) {
+                io.to(cubeName).emit('unlockMessage', { message: unlockResult.message });
+            }
+
+            // Emit sparkling effect every 100 clicks
+            if (cube.clicks % 100 === 0) {
+                io.to(cubeName).emit('sparkling', { clicks: cube.clicks });
+            }
+
+            console.log(`Cube ${cubeName} clicked. Total clicks: ${cube.clicks}, Total worships: ${cube.totalWorships}`);
         } catch (error) {
             console.error('Error clicking cube:', error);
             socket.emit('error', { message: 'Failed to process click' });
@@ -331,6 +379,7 @@ io.on('connection', (socket) => {
             const cube = new Cube({
                 _id: cubeName,
                 clicks: clicks || 100,
+                totalWorships: clicks || 100,
                 unlocked: ['name']
             });
 
@@ -374,6 +423,15 @@ io.on('connection', (socket) => {
                 return;
             }
 
+            // Check if player has enough worships to change color
+            const requiredWorships = (cube.colorChangesCount + 1) * COLOR_CHANGE_COST;
+            if (cube.totalWorships < requiredWorships) {
+                socket.emit('error', { message: `Not enough worships to change color (need ${requiredWorships})` });
+                return;
+            }
+
+            // Increment color changes counter
+            cube.colorChangesCount += 1;
             cube.currentColor = color;
             cube.lastInteraction = new Date();
             await cube.save();
@@ -381,7 +439,7 @@ io.on('connection', (socket) => {
             // Broadcast updated state to all users in the room
             io.to(cubeName).emit('cubeState', cube);
 
-            console.log(`Cube ${cubeName} color changed to: ${color}`);
+            console.log(`Cube ${cubeName} color changed to: ${color} (${cube.colorChangesCount} changes, ${cube.totalWorships} total worships)`);
         } catch (error) {
             console.error('Error changing cube color:', error);
             socket.emit('error', { message: 'Failed to change color' });
@@ -404,11 +462,10 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            // Count already painted pixels
-            const paintedCount = cube.paintedPixels.length;
-
-            if (paintedCount >= cube.availablePixels) {
-                socket.emit('error', { message: 'No more pixels available. Worship more!' });
+            // Check if player has enough worships (cost increases each time)
+            const requiredWorships = (cube.pixelActionsCount + 1) * PIXEL_PER_WORSHIPS;
+            if (cube.totalWorships < requiredWorships) {
+                socket.emit('error', { message: `Not enough worships to paint (need ${requiredWorships})` });
                 return;
             }
 
@@ -418,20 +475,22 @@ io.on('connection', (socket) => {
             );
 
             if (existingPixel) {
-                // Update existing pixel color
+                // Update existing pixel color (still counts as an action)
                 existingPixel.color = color;
             } else {
                 // Add new pixel
                 cube.paintedPixels.push({ face, x, y, color });
             }
 
+            // Increment pixel actions counter
+            cube.pixelActionsCount += 1;
             cube.lastInteraction = new Date();
             await cube.save();
 
             // Broadcast updated state to all users in the room
             io.to(cubeName).emit('cubeState', cube);
 
-            console.log(`Cube ${cubeName} pixel painted at (${x}, ${y}) on face ${face}`);
+            console.log(`Cube ${cubeName} pixel painted at (${x}, ${y}) on face ${face} (${cube.pixelActionsCount} actions, ${cube.totalWorships} total worships)`);
         } catch (error) {
             console.error('Error painting pixel:', error);
             socket.emit('error', { message: 'Failed to paint pixel' });

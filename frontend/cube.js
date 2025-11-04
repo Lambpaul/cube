@@ -14,6 +14,12 @@ class CubeRenderer {
         this.textures = {};
         this.activeFace = 'top';
 
+        // Manual rotation controls
+        this.autoRotate = true;
+        this.isDragging = false;
+        this.previousMousePosition = { x: 0, y: 0 };
+        this.rotationVelocity = { x: 0, y: 0 };
+
         this.init();
     }
 
@@ -50,8 +56,102 @@ class CubeRenderer {
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
 
+        // Manual rotation controls
+        this.setupRotationControls();
+
         // Start animation loop
         this.animate();
+    }
+
+    setupRotationControls() {
+        const canvas = this.renderer.domElement;
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        canvas.addEventListener('mouseup', () => this.onMouseUp());
+        canvas.addEventListener('mouseleave', () => this.onMouseUp());
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+        canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+        canvas.addEventListener('touchend', () => this.onTouchEnd());
+    }
+
+    onMouseDown(event) {
+        if (!this.is3D) return;
+        this.isDragging = true;
+        this.autoRotate = false; // Stop auto rotation
+        this.previousMousePosition = {
+            x: event.clientX,
+            y: event.clientY
+        };
+    }
+
+    onMouseMove(event) {
+        if (!this.isDragging || !this.is3D) return;
+
+        const deltaX = event.clientX - this.previousMousePosition.x;
+        const deltaY = event.clientY - this.previousMousePosition.y;
+
+        if (this.cube) {
+            this.cube.rotation.y += deltaX * 0.01;
+            this.cube.rotation.x += deltaY * 0.01;
+        }
+        if (this.edges) {
+            this.edges.rotation.y += deltaX * 0.01;
+            this.edges.rotation.x += deltaY * 0.01;
+        }
+
+        this.previousMousePosition = {
+            x: event.clientX,
+            y: event.clientY
+        };
+    }
+
+    onMouseUp() {
+        this.isDragging = false;
+    }
+
+    onTouchStart(event) {
+        if (!this.is3D) return;
+        event.preventDefault();
+        if (event.touches.length === 1) {
+            this.isDragging = true;
+            this.autoRotate = false; // Stop auto rotation
+            this.previousMousePosition = {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY
+            };
+        }
+    }
+
+    onTouchMove(event) {
+        if (!this.isDragging || !this.is3D) return;
+        event.preventDefault();
+
+        if (event.touches.length === 1) {
+            const deltaX = event.touches[0].clientX - this.previousMousePosition.x;
+            const deltaY = event.touches[0].clientY - this.previousMousePosition.y;
+
+            if (this.cube) {
+                this.cube.rotation.y += deltaX * 0.01;
+                this.cube.rotation.x += deltaY * 0.01;
+            }
+            if (this.edges) {
+                this.edges.rotation.y += deltaX * 0.01;
+                this.edges.rotation.x += deltaY * 0.01;
+            }
+
+            this.previousMousePosition = {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY
+            };
+        }
+    }
+
+    onTouchEnd() {
+        this.isDragging = false;
     }
 
     createCube(color, is3D = false) {
@@ -235,13 +335,14 @@ class CubeRenderer {
     animate() {
         this.animationId = requestAnimationFrame(() => this.animate());
 
-        // Rotate only in 3D mode
-        if (this.cube && this.is3D) {
-            this.cube.rotation.x += 0.005;
-            this.cube.rotation.y += 0.01;
+        // Rotate only in 3D mode and if auto-rotate is enabled
+        if (this.cube && this.is3D && this.autoRotate) {
+            // Slowed down rotation (was 0.005 and 0.01, now 0.002 and 0.004)
+            this.cube.rotation.x += 0.002;
+            this.cube.rotation.y += 0.004;
             if (this.edges) {
-                this.edges.rotation.x += 0.005;
-                this.edges.rotation.y += 0.01;
+                this.edges.rotation.x += 0.002;
+                this.edges.rotation.y += 0.004;
             }
         }
 

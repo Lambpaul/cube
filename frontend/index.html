@@ -10,6 +10,9 @@
     <!-- Welcome text that fades out after 10s -->
     <div id="welcome-text">Welcome to the Cube</div>
 
+    <!-- Mystical unlock message -->
+    <div id="unlock-message" class="hidden"></div>
+
     <!-- Cube name and UI controls in top left -->
     <div id="top-left-panel" class="hidden">
         <div id="cube-name-display"></div>
@@ -26,20 +29,6 @@
                 <button class="color-btn" data-color="#0000FF" style="background: #0000FF;" title="Blue"></button>
                 <button class="color-btn" data-color="#FFFF00" style="background: #FFFF00;" title="Yellow"></button>
             </div>
-            <div class="color-progress">
-                <div class="progress-item">
-                    <span>Red:</span>
-                    <span id="red-progress">0/100</span>
-                </div>
-                <div class="progress-item">
-                    <span>Blue:</span>
-                    <span id="blue-progress">0/100</span>
-                </div>
-                <div class="progress-item">
-                    <span>Yellow:</span>
-                    <span id="yellow-progress">0/100</span>
-                </div>
-            </div>
         </div>
 
         <!-- Full Color Picker (unlocked after 100 worships each primary) -->
@@ -53,12 +42,6 @@
         <!-- Paint Mode (unlocked at 500 clicks) -->
         <div id="paint-mode-panel" class="ui-section hidden">
             <h3>Paint Mode</h3>
-            <div class="paint-info">
-                <span>Pixels Available:</span>
-                <span id="pixels-available">0</span>
-                <span>/</span>
-                <span id="pixels-total">256</span>
-            </div>
             <div class="paint-controls">
                 <label>
                     <input type="checkbox" id="paint-mode-toggle">
