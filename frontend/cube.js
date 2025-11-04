@@ -234,7 +234,7 @@ class CubeRenderer {
             this.cube.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
         } else if (is3D) {
             // Default 3D view: show top face
-            this.cube.rotation.x = -Math.PI / 2; // Rotate to show top face
+            this.cube.rotation.x = Math.PI / 2; // Rotate to show top face
         }
 
         this.scene.add(this.cube);
@@ -253,7 +253,7 @@ class CubeRenderer {
             this.edges.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
         } else if (is3D) {
             // Default 3D view: show top face
-            this.edges.rotation.x = -Math.PI / 2;
+            this.edges.rotation.x = Math.PI / 2;
         }
 
         this.scene.add(this.edges);
@@ -385,8 +385,8 @@ class CubeRenderer {
                 }
 
                 // Animate rotation to maintain top view as cube gains depth
-                // Rotate from (0,0) to (-90°, 0) to keep looking at top face
-                const targetRotationX = -Math.PI / 2; // -90 degrees
+                // Rotate from (0,0) to (+90°, 0) to keep looking at top face
+                const targetRotationX = Math.PI / 2; // +90 degrees
                 const currentRotationX = targetRotationX * eased;
 
                 if (this.cube) {
@@ -442,11 +442,11 @@ class CubeRenderer {
         const startTime = Date.now();
 
         // Start from top view (looking down at the cube)
-        const startRotationX = -Math.PI / 2;  // -90 degrees (top view)
+        const startRotationX = Math.PI / 2;  // +90 degrees (top view)
         const startRotationY = 0;
 
         // End with a subtle tilt to reveal it's 3D, but keep top face as primary view
-        const targetRotationX = -Math.PI / 2.5; // -72 degrees (mainly top view with slight tilt)
+        const targetRotationX = Math.PI / 2.5; // +72 degrees (mainly top view with slight tilt)
         const targetRotationY = Math.PI / 12;   // 15 degrees (gentle rotation)
 
         const animate = () => {
