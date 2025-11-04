@@ -6,6 +6,7 @@ class CubeRenderer {
         this.renderer = null;
         this.cube = null;
         this.edges = null;
+        this.sideEdges = null; // Separate edges for side faces (animated)
         this.is3D = false;
         this.animationId = null;
         this.currentColor = '#000000';
@@ -37,8 +38,12 @@ class CubeRenderer {
         );
         this.camera.position.z = 3;
 
-        // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Renderer with alpha support for proper transparency
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            premultipliedAlpha: false
+        });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.container.appendChild(this.renderer.domElement);
 
@@ -102,6 +107,10 @@ class CubeRenderer {
             this.edges.rotation.y += deltaX * 0.01;
             this.edges.rotation.x += deltaY * 0.01;
         }
+        if (this.sideEdges) {
+            this.sideEdges.rotation.y += deltaX * 0.01;
+            this.sideEdges.rotation.x += deltaY * 0.01;
+        }
 
         this.previousMousePosition = {
             x: event.clientX,
@@ -141,6 +150,10 @@ class CubeRenderer {
             if (this.edges) {
                 this.edges.rotation.y += deltaX * 0.01;
                 this.edges.rotation.x += deltaY * 0.01;
+            }
+            if (this.sideEdges) {
+                this.sideEdges.rotation.y += deltaX * 0.01;
+                this.sideEdges.rotation.x += deltaY * 0.01;
             }
 
             this.previousMousePosition = {
@@ -188,6 +201,12 @@ class CubeRenderer {
             this.edges.geometry.dispose();
             this.edges.material.dispose();
         }
+        if (this.sideEdges) {
+            this.scene.remove(this.sideEdges);
+            this.sideEdges.geometry.dispose();
+            this.sideEdges.material.dispose();
+            this.sideEdges = null;
+        }
 
         this.is3D = is3D;
 
@@ -208,12 +227,12 @@ class CubeRenderer {
         } else if (is3D && this.paintedPixels.length > 0) {
             // Use different textures for each face in 3D
             const materials = [
-                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true }),  // right
-                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true }),   // left
-                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true }),    // top
-                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true }), // bottom
-                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true }),  // front
-                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true })    // back
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false }),  // right
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false }),   // left
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false }),    // top
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false }), // bottom
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false }),  // front
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true, alphaTest: 0.01, depthWrite: false })    // back
             ];
             material = materials;
         } else {
@@ -257,6 +276,22 @@ class CubeRenderer {
         }
 
         this.scene.add(this.edges);
+
+        // Create side edges if in 3D mode and we have saved rotation (i.e., coming from animation)
+        if (is3D && this.paintedPixels.length > 0 && savedRotation && (savedRotation.x !== 0 || savedRotation.y !== 0 || savedRotation.z !== 0)) {
+            if (!this.sideEdges) {
+                const sideEdgesGeometry = new THREE.EdgesGeometry(geometry);
+                const sideEdgesMaterial = new THREE.LineBasicMaterial({
+                    color: color === '#000000' ? 0x000000 : new THREE.Color(color),
+                    linewidth: 2,
+                    transparent: true,
+                    opacity: 1
+                });
+                this.sideEdges = new THREE.LineSegments(sideEdgesGeometry, sideEdgesMaterial);
+                this.sideEdges.rotation.set(savedRotation.x, savedRotation.y, savedRotation.z);
+                this.scene.add(this.sideEdges);
+            }
+        }
     }
 
     createTexture(face) {
@@ -329,13 +364,14 @@ class CubeRenderer {
 
         if (this.paintedPixels.length > 0) {
             // Create materials with initial opacity: top face fully visible, others transparent
+            // alphaTest ensures pixels with low alpha stay completely transparent
             materials3D = [
-                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true, opacity: 0 }),  // right - start invisible
-                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true, opacity: 0 }),   // left - start invisible
-                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true, opacity: 1 }),    // top - fully visible
-                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true, opacity: 0 }), // bottom - start invisible
-                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true, opacity: 0 }),  // front - start invisible
-                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true, opacity: 0 })    // back - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false }),  // right - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false }),   // left - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true, opacity: 1, alphaTest: 0.01, depthWrite: false }),    // top - fully visible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false }), // bottom - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false }),  // front - start invisible
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false })    // back - start invisible
             ];
         }
 
@@ -370,13 +406,27 @@ class CubeRenderer {
                 this.cube.geometry.dispose();
                 this.cube.geometry = new THREE.BoxGeometry(2, 2, 2);
 
+                // Keep existing edges for top face (already visible)
                 if (this.edges) {
                     this.edges.geometry.dispose();
                     this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
-                    // Make edges material transparent to animate opacity
-                    this.edges.material.transparent = true;
-                    this.edges.material.opacity = 0;
                 }
+
+                // Create separate edges for side faces that will fade in
+                if (this.sideEdges) {
+                    this.scene.remove(this.sideEdges);
+                    this.sideEdges.geometry.dispose();
+                    this.sideEdges.material.dispose();
+                }
+                const sideEdgesGeometry = new THREE.EdgesGeometry(this.cube.geometry);
+                const sideEdgesMaterial = new THREE.LineBasicMaterial({
+                    color: this.currentColor === '#000000' ? 0x000000 : new THREE.Color(this.currentColor),
+                    linewidth: 2,
+                    transparent: true,
+                    opacity: 0
+                });
+                this.sideEdges = new THREE.LineSegments(sideEdgesGeometry, sideEdgesMaterial);
+                this.scene.add(this.sideEdges);
 
                 // Set rotation immediately to show top face from the start
                 this.cube.rotation.x = Math.PI / 2; // +90 degrees
@@ -385,11 +435,15 @@ class CubeRenderer {
                     this.edges.rotation.x = Math.PI / 2;
                     this.edges.rotation.y = 0;
                 }
+                if (this.sideEdges) {
+                    this.sideEdges.rotation.x = Math.PI / 2;
+                    this.sideEdges.rotation.y = 0;
+                }
 
                 materialsApplied = true;
             }
 
-            // Animate opacity of side faces (not top) and edges to fade them in
+            // Animate opacity of side faces (not top) and side edges to fade them in
             if (materials3D && materialsApplied) {
                 // Fade in all faces except top (index 2)
                 materials3D.forEach((mat, index) => {
@@ -398,9 +452,9 @@ class CubeRenderer {
                     }
                 });
 
-                // Also fade in the edges
-                if (this.edges) {
-                    this.edges.material.opacity = eased;
+                // Also fade in the side edges (not the main edges which show the top face)
+                if (this.sideEdges) {
+                    this.sideEdges.material.opacity = eased;
                 }
             }
 
@@ -410,12 +464,12 @@ class CubeRenderer {
                 // Transition complete
                 this.is3D = true;
 
-                // Ensure all faces and edges are fully opaque at the end
+                // Ensure all faces and side edges are fully opaque at the end
                 if (materials3D) {
                     materials3D.forEach(mat => mat.opacity = 1);
                 }
-                if (this.edges && this.edges.material) {
-                    this.edges.material.opacity = 1;
+                if (this.sideEdges && this.sideEdges.material) {
+                    this.sideEdges.material.opacity = 1;
                 }
                 if (!materials3D) {
                     // No painted pixels, create standard 3D cube
@@ -461,6 +515,10 @@ class CubeRenderer {
                 this.edges.rotation.x = currentRotationX;
                 this.edges.rotation.y = currentRotationY;
             }
+            if (this.sideEdges) {
+                this.sideEdges.rotation.x = currentRotationX;
+                this.sideEdges.rotation.y = currentRotationY;
+            }
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
@@ -500,6 +558,11 @@ class CubeRenderer {
                 this.edges.rotation.x += 0.001;
                 this.edges.rotation.y += 0.002;
                 this.edges.rotation.z += 0.0015;
+            }
+            if (this.sideEdges) {
+                this.sideEdges.rotation.x += 0.001;
+                this.sideEdges.rotation.y += 0.002;
+                this.sideEdges.rotation.z += 0.0015;
             }
         }
 
