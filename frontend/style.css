@@ -836,7 +836,8 @@ body.dark-mode #ui-panel {
 }
 
 body.dark-mode .ui-section {
-    border-bottom: 1px solid #555555;
+    border: 1px solid #ffffff;
+    border-bottom: 1px solid #ffffff;
 }
 
 body.dark-mode .ui-section h3 {
@@ -891,10 +892,13 @@ body.dark-mode .modal-section {
 }
 
 body.dark-mode .modal-close {
+    background: transparent;
+    border: none;
     color: #ffffff;
 }
 
 body.dark-mode .modal-close:hover {
+    background: transparent;
     color: #cccccc;
 }
 
