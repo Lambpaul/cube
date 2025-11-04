@@ -836,12 +836,19 @@ body.dark-mode #ui-panel {
 }
 
 body.dark-mode .ui-section {
-    border: 1px solid #ffffff;
-    border-bottom: 1px solid #ffffff;
+    border-bottom: 1px solid #555555;
 }
 
 body.dark-mode .ui-section h3 {
     color: #ffffff;
+}
+
+/* Dark mode - cadres blancs englobants pour les panels principaux */
+body.dark-mode #color-selection-panel,
+body.dark-mode #paint-mode-panel,
+body.dark-mode #3d-mode-panel {
+    border: 2px solid #ffffff;
+    padding: 15px;
 }
 
 /* Dark mode color picked display - ensure same padding */

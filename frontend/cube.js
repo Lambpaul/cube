@@ -316,6 +316,22 @@ class CubeRenderer {
         const duration = 2000; // 2 seconds
         const startTime = Date.now();
 
+        // IMPORTANT: Create 3D materials with proper textures BEFORE animation
+        // This prevents the "all faces showing same texture" bug during animation
+        let materials3D = null;
+        let materialsApplied = false;
+
+        if (this.paintedPixels.length > 0) {
+            materials3D = [
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true }),
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true })
+            ];
+        }
+
         const animate = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
@@ -329,6 +345,22 @@ class CubeRenderer {
 
             // Update geometry
             if (this.cube && !this.is3D) {
+                // Apply 3D materials on first frame
+                if (materials3D && !materialsApplied) {
+                    // Dispose old material
+                    if (Array.isArray(this.cube.material)) {
+                        this.cube.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (this.cube.material.map) this.cube.material.map.dispose();
+                        this.cube.material.dispose();
+                    }
+                    this.cube.material = materials3D;
+                    materialsApplied = true;
+                }
+
                 this.cube.geometry.dispose();
                 this.cube.geometry = new THREE.BoxGeometry(2, 2, currentZ);
 
@@ -343,7 +375,18 @@ class CubeRenderer {
             } else {
                 // Transition complete
                 this.is3D = true;
-                this.createCube(this.currentColor, true);
+                // Only recreate cube if we don't have painted pixels (materials already set)
+                if (!materials3D) {
+                    this.createCube(this.currentColor, true);
+                } else {
+                    // Just update the final geometry
+                    this.cube.geometry.dispose();
+                    this.cube.geometry = new THREE.BoxGeometry(2, 2, endZ);
+                    if (this.edges) {
+                        this.edges.geometry.dispose();
+                        this.edges.geometry = new THREE.EdgesGeometry(this.cube.geometry);
+                    }
+                }
             }
         };
 
