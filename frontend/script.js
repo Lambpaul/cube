@@ -53,6 +53,9 @@ const cubeNameInput = document.getElementById('cube-name-input');
 const confirmNameBtn = document.getElementById('confirm-name-btn');
 const currentCubeSection = document.getElementById('current-cube-section');
 
+// Dark mode elements
+const darkModeToggle = document.getElementById('dark-mode-toggle-checkbox');
+
 // Constants
 const PRIMARY_COLORS = {
     red: '#FF0000',
@@ -296,6 +299,12 @@ function setupEventListeners() {
             handlePaintClick(e);
         }
     });
+
+    // Dark mode toggle
+    darkModeToggle.addEventListener('change', (e) => {
+        const darkMode = e.target.checked;
+        toggleDarkMode(darkMode);
+    });
 }
 
 // Join a cube by name
@@ -366,6 +375,12 @@ function updateCubeState(cube) {
         cubeNameDisplay.textContent = cube._id;
         topLeftPanel.classList.remove('hidden');
         currentCubeName = cube._id;
+    }
+
+    // Update dark mode state
+    if (cube.darkMode !== undefined) {
+        darkModeToggle.checked = cube.darkMode;
+        applyDarkMode(cube.darkMode);
     }
 
     // Update dynamic UI
@@ -612,6 +627,34 @@ function showSparklingEffect() {
         setTimeout(() => {
             particle.remove();
         }, 1000);
+    }
+}
+
+// Toggle dark mode
+function toggleDarkMode(darkMode) {
+    if (currentCubeName && isInDatabase) {
+        // Send to server to sync across all users
+        socket.emit('toggleDarkMode', { cubeName: currentCubeName, darkMode });
+    } else {
+        // Local cube only
+        applyDarkMode(darkMode);
+    }
+}
+
+// Apply dark mode styling
+function applyDarkMode(darkMode) {
+    if (darkMode) {
+        document.body.classList.add('dark-mode');
+        // Update cube renderer background
+        if (cubeRenderer && cubeRenderer.scene) {
+            cubeRenderer.scene.background = new THREE.Color(0x000000);
+        }
+    } else {
+        document.body.classList.remove('dark-mode');
+        // Update cube renderer background
+        if (cubeRenderer && cubeRenderer.scene) {
+            cubeRenderer.scene.background = new THREE.Color(0xffffff);
+        }
     }
 }
 

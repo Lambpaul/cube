@@ -3,3 +3,4 @@ db_data/
 npm-debug.log
 .DS_Store
 *.log
+nul

@@ -208,12 +208,12 @@ class CubeRenderer {
         } else if (is3D && this.paintedPixels.length > 0) {
             // Use different textures for each face in 3D
             const materials = [
-                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide }),  // right
-                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide }),   // left
-                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide }),    // top
-                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide }), // bottom
-                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide }),  // front
-                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide })    // back
+                new THREE.MeshBasicMaterial({ map: this.createTexture('right'), side: THREE.FrontSide, transparent: true }),  // right
+                new THREE.MeshBasicMaterial({ map: this.createTexture('left'), side: THREE.FrontSide, transparent: true }),   // left
+                new THREE.MeshBasicMaterial({ map: this.createTexture('top'), side: THREE.FrontSide, transparent: true }),    // top
+                new THREE.MeshBasicMaterial({ map: this.createTexture('bottom'), side: THREE.FrontSide, transparent: true }), // bottom
+                new THREE.MeshBasicMaterial({ map: this.createTexture('front'), side: THREE.FrontSide, transparent: true }),  // front
+                new THREE.MeshBasicMaterial({ map: this.createTexture('back'), side: THREE.FrontSide, transparent: true })    // back
             ];
             material = materials;
         } else {
@@ -262,9 +262,9 @@ class CubeRenderer {
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // Fill with white background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
+        // Clear canvas to transparent (instead of white)
+        // This allows the background color (white or black in dark mode) to show through
+        ctx.clearRect(0, 0, size, size);
 
         // Draw painted pixels for this face
         this.paintedPixels.forEach(pixel => {

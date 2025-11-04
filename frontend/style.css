@@ -574,3 +574,146 @@ button:hover {
         height: 35px;
     }
 }
+
+/* Toggle Switch for Dark Mode */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    margin-left: 10px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #000000;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background: #000000;
+    color: #ffffff;
+}
+
+body.dark-mode #welcome-text {
+    color: #ffffff;
+}
+
+body.dark-mode #unlock-message {
+    color: #ffffff;
+}
+
+body.dark-mode #top-left-panel {
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+}
+
+body.dark-mode #settings-btn {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+}
+
+body.dark-mode #settings-btn:hover {
+    background: #333333;
+}
+
+body.dark-mode #ui-panel {
+    background: rgba(0, 0, 0, 0.9);
+    color: #ffffff;
+}
+
+body.dark-mode .ui-section {
+    border: 1px solid #ffffff;
+}
+
+body.dark-mode .ui-section h3 {
+    color: #ffffff;
+}
+
+body.dark-mode button {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #ffffff;
+}
+
+body.dark-mode button:hover {
+    background: #cccccc;
+}
+
+body.dark-mode .color-btn {
+    border: 2px solid #ffffff;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="color"] {
+    background: #222222;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+body.dark-mode .modal-content {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+}
+
+body.dark-mode .modal-section {
+    border-bottom: 1px solid #ffffff;
+}
+
+body.dark-mode .modal-close {
+    color: #ffffff;
+}
+
+body.dark-mode .modal-close:hover {
+    color: #cccccc;
+}
+
+body.dark-mode #ui-toggle-btn {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+}
+
+body.dark-mode #ui-toggle-btn:hover {
+    background: #333333;
+}
+
+/* Dark mode for paint grid */
+body.dark-mode #paint-grid-canvas {
+    background: transparent;
+}

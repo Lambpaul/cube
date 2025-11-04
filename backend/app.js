@@ -8,14 +8,16 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
+        // SECURITY WARNING: In production, replace "*" with specific allowed origins
+        // Example: origin: ["https://yourdomain.com", "https://app.yourdomain.com"]
         origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // SECURITY WARNING: In production, configure specific CORS origins
+app.use(express.json({ limit: '1mb' })); // SECURITY: Limit request body size to prevent DOS
 
 // MongoDB connection
 const DB_HOST = process.env.DB_HOST || 'db';
@@ -88,7 +90,14 @@ const cubeSchema = new mongoose.Schema({
         default: false
     },
 
-    // Worship tracking (counter only goes up)
+    // UI Preferences
+    darkMode: {
+        type: Boolean,
+        default: false
+    },
+
+    // Worship tracking (SECURITY: counter only goes up, never decremented)
+    // Used as progressive threshold system, NOT as spendable currency
     totalWorships: {
         type: Number,
         default: 0
@@ -132,6 +141,41 @@ const PRIMARY_COLORS = {
     blue: '#0000FF',
     yellow: '#FFFF00'
 };
+
+// Security validation functions
+function isValidCubeName(name) {
+    // Prevent NoSQL injection and validate cube name
+    if (typeof name !== 'string') return false;
+    if (name.length === 0 || name.length > 50) return false;
+    // Allow alphanumeric, spaces, and common special chars, but prevent injection
+    return /^[a-zA-Z0-9\s\-_\.]+$/.test(name);
+}
+
+function isValidColor(color) {
+    // Validate hex color format
+    if (typeof color !== 'string') return false;
+    return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
+function isValidFace(face) {
+    const validFaces = ['top', 'bottom', 'front', 'back', 'left', 'right'];
+    return typeof face === 'string' && validFaces.includes(face);
+}
+
+function isValidCoordinate(coord, maxResolution) {
+    return typeof coord === 'number' &&
+           Number.isInteger(coord) &&
+           coord >= 0 &&
+           coord < maxResolution;
+}
+
+function sanitizeInput(input) {
+    // Ensure input is a string and prevent object injection
+    if (typeof input !== 'string') {
+        throw new Error('Invalid input type');
+    }
+    return input.trim();
+}
 
 // Mystical messages for unlocks
 const UNLOCK_MESSAGES = {
@@ -216,11 +260,17 @@ app.post('/api/cube', async (req, res) => {
     try {
         const { name, clicks } = req.body;
 
-        if (!name || name.trim().length === 0) {
-            return res.status(400).json({ error: 'Cube name is required' });
+        // Security: Validate input type and sanitize
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({ error: 'Cube name is required and must be a string' });
         }
 
-        const cubeName = name.trim();
+        const cubeName = sanitizeInput(name);
+
+        // Security: Validate cube name format
+        if (!isValidCubeName(cubeName)) {
+            return res.status(400).json({ error: 'Invalid cube name. Use only letters, numbers, spaces, hyphens, underscores, and dots (max 50 characters)' });
+        }
 
         // Check if cube with this name already exists
         const existingCube = await Cube.findById(cubeName);
@@ -228,11 +278,14 @@ app.post('/api/cube', async (req, res) => {
             return res.status(409).json({ error: 'A cube with this name already exists' });
         }
 
+        // Security: Validate clicks is a number and within reasonable bounds
+        const validClicks = (typeof clicks === 'number' && clicks >= 100 && clicks <= 1000000) ? clicks : 100;
+
         // Create cube with name as _id
         const cube = new Cube({
             _id: cubeName,
-            clicks: clicks || 100,
-            totalWorships: clicks || 100,
+            clicks: validClicks,
+            totalWorships: validClicks,
             unlocked: ['name']
         });
 
@@ -250,7 +303,13 @@ app.post('/api/cube', async (req, res) => {
 // Get a cube by name
 app.get('/api/cube/:name', async (req, res) => {
     try {
-        const cube = await Cube.findById(req.params.name);
+        // Security: Validate cube name
+        const cubeName = req.params.name;
+        if (!isValidCubeName(cubeName)) {
+            return res.status(400).json({ error: 'Invalid cube name format' });
+        }
+
+        const cube = await Cube.findById(cubeName);
 
         if (!cube) {
             return res.status(404).json({ error: 'Cube not found' });
@@ -284,6 +343,17 @@ io.on('connection', (socket) => {
     // Join a cube room by name
     socket.on('joinCube', async ({ cubeName }) => {
         try {
+            // Security: Validate cube name
+            if (!cubeName || typeof cubeName !== 'string') {
+                socket.emit('error', { message: 'Invalid cube name' });
+                return;
+            }
+
+            if (!isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name format' });
+                return;
+            }
+
             const cube = await Cube.findById(cubeName);
 
             if (!cube) {
@@ -311,6 +381,12 @@ io.on('connection', (socket) => {
     // Click the cube (for cubes that already exist in DB)
     socket.on('clickCube', async ({ cubeName }) => {
         try {
+            // Security: Validate cube name
+            if (!cubeName || typeof cubeName !== 'string' || !isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name' });
+                return;
+            }
+
             const cube = await Cube.findById(cubeName);
 
             if (!cube) {
@@ -319,7 +395,7 @@ io.on('connection', (socket) => {
             }
 
             cube.clicks += 1;
-            cube.totalWorships += 1; // Track total worships for spending
+            cube.totalWorships += 1; // IMPORTANT: Worships are never decremented - used as progressive threshold, not currency
             cube.lastInteraction = new Date();
 
             // Track worships for current color if primary colors are unlocked
@@ -361,12 +437,19 @@ io.on('connection', (socket) => {
     // Create cube with name (when user reaches 100 clicks and names it)
     socket.on('createNamedCube', async ({ name, clicks }) => {
         try {
-            if (!name || name.trim().length === 0) {
-                socket.emit('error', { message: 'Cube name is required' });
+            // Security: Validate input
+            if (!name || typeof name !== 'string') {
+                socket.emit('error', { message: 'Cube name is required and must be a string' });
                 return;
             }
 
-            const cubeName = name.trim();
+            const cubeName = sanitizeInput(name);
+
+            // Security: Validate cube name format
+            if (!isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name. Use only letters, numbers, spaces, hyphens, underscores, and dots (max 50 characters)' });
+                return;
+            }
 
             // Check if cube already exists
             const existingCube = await Cube.findById(cubeName);
@@ -375,11 +458,14 @@ io.on('connection', (socket) => {
                 return;
             }
 
+            // Security: Validate clicks is a number and within reasonable bounds
+            const validClicks = (typeof clicks === 'number' && clicks >= 100 && clicks <= 1000000) ? clicks : 100;
+
             // Create new cube
             const cube = new Cube({
                 _id: cubeName,
-                clicks: clicks || 100,
-                totalWorships: clicks || 100,
+                clicks: validClicks,
+                totalWorships: validClicks,
                 unlocked: ['name']
             });
 
@@ -403,6 +489,17 @@ io.on('connection', (socket) => {
     // Change cube color
     socket.on('changeCubeColor', async ({ cubeName, color }) => {
         try {
+            // Security: Validate inputs
+            if (!cubeName || typeof cubeName !== 'string' || !isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name' });
+                return;
+            }
+
+            if (!color || !isValidColor(color)) {
+                socket.emit('error', { message: 'Invalid color format. Must be hex color (#RRGGBB)' });
+                return;
+            }
+
             const cube = await Cube.findById(cubeName);
 
             if (!cube) {
@@ -449,10 +546,32 @@ io.on('connection', (socket) => {
     // Paint a pixel
     socket.on('paintPixel', async ({ cubeName, face, x, y, color }) => {
         try {
+            // Security: Validate all inputs
+            if (!cubeName || typeof cubeName !== 'string' || !isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name' });
+                return;
+            }
+
+            if (!isValidFace(face)) {
+                socket.emit('error', { message: 'Invalid face. Must be one of: top, bottom, front, back, left, right' });
+                return;
+            }
+
+            if (!isValidColor(color)) {
+                socket.emit('error', { message: 'Invalid color format. Must be hex color (#RRGGBB)' });
+                return;
+            }
+
             const cube = await Cube.findById(cubeName);
 
             if (!cube) {
                 socket.emit('error', { message: 'Cube not found' });
+                return;
+            }
+
+            // Security: Validate coordinates against current resolution
+            if (!isValidCoordinate(x, cube.gridResolution) || !isValidCoordinate(y, cube.gridResolution)) {
+                socket.emit('error', { message: `Invalid coordinates. Must be between 0 and ${cube.gridResolution - 1}` });
                 return;
             }
 
@@ -494,6 +613,42 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error painting pixel:', error);
             socket.emit('error', { message: 'Failed to paint pixel' });
+        }
+    });
+
+    // Toggle dark mode
+    socket.on('toggleDarkMode', async ({ cubeName, darkMode }) => {
+        try {
+            // Security: Validate inputs
+            if (!cubeName || typeof cubeName !== 'string' || !isValidCubeName(cubeName)) {
+                socket.emit('error', { message: 'Invalid cube name' });
+                return;
+            }
+
+            if (typeof darkMode !== 'boolean') {
+                socket.emit('error', { message: 'Invalid dark mode value' });
+                return;
+            }
+
+            const cube = await Cube.findById(cubeName);
+
+            if (!cube) {
+                socket.emit('error', { message: 'Cube not found' });
+                return;
+            }
+
+            // Update dark mode preference
+            cube.darkMode = darkMode;
+            cube.lastInteraction = new Date();
+            await cube.save();
+
+            // Broadcast updated state to all users in the room
+            io.to(cubeName).emit('cubeState', cube);
+
+            console.log(`Cube ${cubeName} dark mode ${darkMode ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            console.error('Error toggling dark mode:', error);
+            socket.emit('error', { message: 'Failed to toggle dark mode' });
         }
     });
 
