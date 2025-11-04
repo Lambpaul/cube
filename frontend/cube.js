@@ -407,14 +407,14 @@ class CubeRenderer {
                 this.cube.geometry = new THREE.BoxGeometry(2, 2, 2);
 
                 // Create edges only for the top face (4 lines forming a square)
-                // Top face vertices when rotated 90° around X axis
+                // Top face in original coordinates has Y = +1
                 const topEdgesGeometry = new THREE.BufferGeometry();
                 const topEdgesVertices = new Float32Array([
-                    // Top face edges (square on XY plane at Z=1)
-                    -1, -1, 1,  1, -1, 1,  // bottom edge
-                     1, -1, 1,  1,  1, 1,  // right edge
-                     1,  1, 1, -1,  1, 1,  // top edge
-                    -1,  1, 1, -1, -1, 1   // left edge
+                    // Top face edges (Y = +1)
+                    -1,  1, -1,   1,  1, -1,  // back edge
+                     1,  1, -1,   1,  1,  1,  // right edge
+                     1,  1,  1,  -1,  1,  1,  // front edge
+                    -1,  1,  1,  -1,  1, -1   // left edge
                 ]);
                 topEdgesGeometry.setAttribute('position', new THREE.BufferAttribute(topEdgesVertices, 3));
 
