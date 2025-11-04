@@ -123,8 +123,7 @@ function initSocket() {
         } else if (error.message && error.message.includes('not unlocked')) {
             showMysticalError('not_unlocked');
         } else if (error.message && error.message.includes('already exists')) {
-            // Show error under the name input field
-            showCubeNameError('This essence is already bound to another Cube...');
+            showMysticalError('name_already_taken');
         } else {
             showMysticalError('default');
         }
@@ -377,6 +376,7 @@ function createNamedCube(name) {
     if (localClicks >= MILESTONES.NAME) {
         socket.emit('createNamedCube', { name, clicks: localClicks });
         nameModal.classList.add('hidden');
+        cubeNameInput.value = '';
     }
 }
 
@@ -603,6 +603,7 @@ function showMysticalError(errorType) {
         'cube_not_found': "The Cube's essence is elsewhere... it cannot be found",
         'cannot_change_color': "The Cube cannot shift its hue at this moment...",
         'paint_not_unlocked': "The Cube does not yet accept your artistic touch...",
+        'name_already_taken': "The Cube rejects this name... another has already claimed this essence",
         'default': "The Cube denies your request... something is amiss"
     };
 
