@@ -180,6 +180,22 @@ const UNLOCK_MESSAGES = {
     mode_3d: "The veil lifts... behold the Cube in all its dimensions"
 };
 
+// Sanitize cube data before sending to client (hide progression thresholds)
+function sanitizeCubeForClient(cube) {
+    // Only send data necessary for UI rendering, hide all progression metrics
+    return {
+        _id: cube._id,
+        unlocked: cube.unlocked || [],
+        currentColor: cube.currentColor,
+        paintedPixels: cube.paintedPixels || [],
+        gridResolution: cube.gridResolution,
+        is3D: cube.is3D,
+        allColorsUnlocked: cube.allColorsUnlocked,
+        // DO NOT send: clicks, primaryColors.worships, totalWorships, colorChangesCount, pixelActionsCount
+        // These contain progression information that would reveal unlock thresholds
+    };
+}
+
 // Check and unlock features based on clicks
 function checkUnlocks(cube) {
     const previousUnlocked = [...cube.unlocked];
@@ -287,7 +303,7 @@ app.post('/api/cube', async (req, res) => {
         await cube.save();
 
         console.log(`New cube created: ${cubeName}`);
-        res.json(cube);
+        res.json(sanitizeCubeForClient(cube));
     } catch (error) {
         console.error('Error creating cube:', error);
         res.status(500).json({ error: 'Failed to create cube' });
@@ -309,7 +325,7 @@ app.get('/api/cube/:name', async (req, res) => {
             return res.status(404).json({ error: 'Cube not found' });
         }
 
-        res.json(cube);
+        res.json(sanitizeCubeForClient(cube));
     } catch (error) {
         console.error('Error fetching cube:', error);
         res.status(500).json({ error: 'Failed to fetch cube' });
@@ -323,7 +339,7 @@ app.get('/api/cubes', async (req, res) => {
             .sort({ clicks: -1 })
             .limit(10);
 
-        res.json(cubes);
+        res.json(cubes.map(cube => sanitizeCubeForClient(cube)));
     } catch (error) {
         console.error('Error fetching cubes:', error);
         res.status(500).json({ error: 'Failed to fetch cubes' });
@@ -358,8 +374,8 @@ io.on('connection', (socket) => {
             socket.join(cubeName);
             console.log(`User ${socket.id} joined cube ${cubeName}`);
 
-            // Send current cube state
-            socket.emit('cubeState', cube);
+            // Send current cube state (sanitized to hide progression data)
+            socket.emit('cubeState', sanitizeCubeForClient(cube));
 
             // Notify others in the room
             socket.to(cubeName).emit('userJoined', {
@@ -409,7 +425,7 @@ io.on('connection', (socket) => {
             await cube.save();
 
             // Broadcast updated state to all users in the room
-            io.to(cubeName).emit('cubeState', cube);
+            io.to(cubeName).emit('cubeState', sanitizeCubeForClient(cube));
 
             // Emit unlock message if there's one
             if (unlockResult.message) {
@@ -469,14 +485,31 @@ io.on('connection', (socket) => {
             // Join the cube room
             socket.join(cubeName);
 
-            // Send cube state
-            socket.emit('cubeCreated', cube);
-            socket.emit('cubeState', cube);
+            // Send cube state (sanitized)
+            socket.emit('cubeCreated', { _id: cube._id });
+            socket.emit('cubeState', sanitizeCubeForClient(cube));
 
             console.log(`Cube created and named: ${cubeName}`);
         } catch (error) {
             console.error('Error creating named cube:', error);
             socket.emit('error', { message: 'Failed to create cube' });
+        }
+    });
+
+    // Check local progress (for local cubes not yet in DB)
+    socket.on('checkLocalProgress', async ({ clicks }) => {
+        try {
+            // Security: Validate clicks is a number
+            if (typeof clicks !== 'number' || clicks < 0) {
+                return;
+            }
+
+            // Check if naming threshold is reached
+            if (clicks >= MILESTONES.NAME) {
+                socket.emit('showNameModal');
+            }
+        } catch (error) {
+            console.error('Error checking local progress:', error);
         }
     });
 
@@ -528,7 +561,7 @@ io.on('connection', (socket) => {
             await cube.save();
 
             // Broadcast updated state to all users in the room
-            io.to(cubeName).emit('cubeState', cube);
+            io.to(cubeName).emit('cubeState', sanitizeCubeForClient(cube));
 
             console.log(`Cube ${cubeName} color changed to: ${color} (${cube.colorChangesCount} changes, ${cube.totalWorships} total worships)`);
         } catch (error) {
@@ -601,7 +634,7 @@ io.on('connection', (socket) => {
             await cube.save();
 
             // Broadcast updated state to all users in the room
-            io.to(cubeName).emit('cubeState', cube);
+            io.to(cubeName).emit('cubeState', sanitizeCubeForClient(cube));
 
             console.log(`Cube ${cubeName} pixel painted at (${x}, ${y}) on face ${face} (${cube.pixelActionsCount} actions, ${cube.totalWorships} total worships)`);
         } catch (error) {

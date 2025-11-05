@@ -1,4 +1,8 @@
-// Global variables
+// Encapsulated application state
+(function() {
+    'use strict';
+
+// Application state (not directly accessible from console)
 let socket = null;
 let cubeRenderer = null;
 let currentCubeName = null;
@@ -6,7 +10,7 @@ let localClicks = 0;
 let isInDatabase = false;
 let currentCubeData = null;
 let paintModeEnabled = false;
-let selectedColor = '#FF0000'; // Currently selected color
+let selectedColor = '#FF0000';
 let selectedFace = 'top';
 
 // UI Elements
@@ -64,15 +68,6 @@ const PRIMARY_COLORS = {
     yellow: '#FFFF00'
 };
 
-const MILESTONES = {
-    NAME: 100,
-    PRIMARY_COLORS: 200,
-    PRIMARY_COLOR_MASTERY: 100,
-    PAINT_MODE: 500,
-    HIGH_RES: 2000,
-    MODE_3D: 10000
-};
-
 // Initialize
 function init() {
     initSocket();
@@ -99,7 +94,7 @@ function initSocket() {
     socket = io();
 
     socket.on('connect', () => {
-        console.log('Connected to server');
+        // Connected to server
     });
 
     socket.on('cubeState', (cube) => {
@@ -107,7 +102,7 @@ function initSocket() {
     });
 
     socket.on('cubeCreated', (cube) => {
-        console.log('Cube created in database:', cube._id);
+        // Cube created in database
         isInDatabase = true;
         currentCubeName = cube._id;
         updateUIWithCubeName(cube._id);
@@ -130,7 +125,7 @@ function initSocket() {
     });
 
     socket.on('disconnect', () => {
-        console.log('Disconnected from server');
+        // Disconnected from server
     });
 
     socket.on('unlockMessage', ({ message }) => {
@@ -139,6 +134,10 @@ function initSocket() {
 
     socket.on('sparkling', ({ clicks }) => {
         showSparklingEffect();
+    });
+
+    socket.on('showNameModal', () => {
+        nameModal.classList.remove('hidden');
     });
 }
 
@@ -362,29 +361,23 @@ function clickCube() {
     } else {
         // Local cube, increment locally
         localClicks++;
-        console.log(`Local clicks: ${localClicks}`);
 
-        // Check if we reached 100 clicks
-        if (localClicks >= MILESTONES.NAME) {
-            nameModal.classList.remove('hidden');
-        }
+        // Server will tell us when naming is available
+        socket.emit('checkLocalProgress', { clicks: localClicks });
     }
 }
 
 // Create a named cube in database
 function createNamedCube(name) {
-    if (localClicks >= MILESTONES.NAME) {
-        socket.emit('createNamedCube', { name, clicks: localClicks });
-        nameModal.classList.add('hidden');
-        cubeNameInput.value = '';
-    }
+    socket.emit('createNamedCube', { name, clicks: localClicks });
+    nameModal.classList.add('hidden');
+    cubeNameInput.value = '';
 }
 
 // Update cube state from server
 function updateCubeState(cube) {
     if (!cube) return;
 
-    console.log('Cube state updated:', cube);
     currentCubeData = cube;
 
     // Update cube name display
@@ -682,3 +675,5 @@ function applyDarkMode(darkMode) {
 
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', init);
+
+})(); // End of IIFE - protects variables from console access
